@@ -1,0 +1,37 @@
+{
+  "name": "alliance_jobs_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/lib/server.js",
+  "scripts": {
+    "dev": "nodemon --watch 'src/**/*.ts' --exec tsx src/lib/server.ts",
+    "build": "npm install && tsc",
+    "start": "node dist/lib/server.js",
+    "db:studio": "drizzle-kit studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^22.15.30",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.44.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "mysql2": "^3.14.1",
+    "pg": "^8.16.0",
+    "postgres": "^3.4.7",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.1",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.19.4"
+  }
+}

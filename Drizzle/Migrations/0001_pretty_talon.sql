@@ -1,0 +1,1 @@
+ALTER TABLE `tbl_users` ADD `device_fcm` varchar(255) DEFAULT 'NULL';--> statement-breakpoint

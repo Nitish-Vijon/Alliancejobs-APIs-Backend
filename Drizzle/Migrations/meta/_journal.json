@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1751997481908,
+      "tag": "0001_pretty_talon",
+      "breakpoints": true
+    }
+  ]
+}
