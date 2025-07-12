@@ -11,6 +11,7 @@ import {
   updateUserPortfolioHandler,
   updateUserAwardsHandler,
   updateUserSkillsHandler,
+  getJobRecommendationsHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -27,6 +28,11 @@ export const verifiyOtp = tryCatch(
 export const userProfileRelatedJobs = tryCatch(
   "Get User Profile Related Jobs",
   getUserRelatedProfileJobsHandler
+);
+
+export const userRecommendationsJobs = tryCatch(
+  "Get User Recommendations Jobs",
+  getJobRecommendationsHandler
 );
 
 export const updateUserBasicInfo = tryCatch(

@@ -31,7 +31,7 @@ interface RelatedJobsQuery {
   userId?: string;
   page?: string;
   limit?: string;
-  jobType?: string;
+  jobTypeId?: string;
   salaryRange?: string;
 }
 
@@ -186,12 +186,13 @@ export const getUserRelatedProfileJobsHandler = async (
 ): Promise<void> => {
   try {
     const {
-      userId,
       page = "1",
       limit = "10",
-      jobType,
+      jobTypeId,
       salaryRange,
     }: RelatedJobsQuery = req.query;
+
+    const userId = req.user?.id.toString();
 
     // Validate required parameters
     if (!userId) {
@@ -273,8 +274,8 @@ export const getUserRelatedProfileJobsHandler = async (
     }
 
     // Add additional filters if provided
-    if (jobType) {
-      profileConditions.push(eq(tblJobPost.jobType, parseInt(jobType)));
+    if (jobTypeId) {
+      profileConditions.push(eq(tblJobPost.jobType, parseInt(jobTypeId)));
     }
 
     if (salaryRange) {
@@ -433,8 +434,9 @@ export const getJobRecommendationsHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { userId, limit = "5" }: { userId?: string; limit?: string } =
-      req.query;
+    const { limit = "5" }: { limit?: string } = req.query;
+
+    const userId = req.user.id;
 
     if (!userId) {
       throw new ErrorHandler({
@@ -456,7 +458,7 @@ export const getJobRecommendationsHandler = async (
       })
       .from(tblJobApply)
       .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
-      .where(eq(tblJobApply.candId, parseInt(userId)))
+      .where(eq(tblJobApply.candId, parseInt(userId.toString())))
       .limit(10); // Get last 10 applied jobs for analysis
 
     // Extract unique sectors and industries
@@ -468,7 +470,7 @@ export const getJobRecommendationsHandler = async (
     const appliedJobIds = await db
       .select({ jobId: tblJobApply.jobId })
       .from(tblJobApply)
-      .where(eq(tblJobApply.candId, parseInt(userId)));
+      .where(eq(tblJobApply.candId, parseInt(userId.toString())));
 
     const appliedIds = appliedJobIds.map((job) => job.jobId);
 
@@ -493,7 +495,7 @@ export const getJobRecommendationsHandler = async (
       .where(
         and(
           eq(tblJobPost.status, 1),
-          ne(tblJobPost.eId, parseInt(userId)),
+          ne(tblJobPost.eId, parseInt(userId.toString())),
           appliedIds.length > 0
             ? sql`${tblJobPost.id} NOT IN (${appliedIds.join(",")})`
             : sql`1=1`,
