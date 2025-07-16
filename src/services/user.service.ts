@@ -12,6 +12,9 @@ import {
   updateUserAwardsHandler,
   updateUserSkillsHandler,
   getJobRecommendationsHandler,
+  getUserFavoriteJobsHandler,
+  get_Data_For_Apply_JobHandler,
+  Apply_JobHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -79,3 +82,15 @@ export const getUserAppliedJobs = tryCatch(
   "Get User Applied Jobs",
   getUserAppliedJobsHandler
 );
+
+export const getUserFavoriteJobs = tryCatch(
+  "Get User Favorite Jobs",
+  getUserFavoriteJobsHandler
+);
+
+export const get_Data_For_Apply_Job = tryCatch(
+  "Get Data For Apply Job",
+  get_Data_For_Apply_JobHandler
+);
+
+export const Apply_Job = tryCatch("Apply to Job", Apply_JobHandler);

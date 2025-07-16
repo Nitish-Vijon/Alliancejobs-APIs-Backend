@@ -13,6 +13,9 @@ import {
   userProfileRelatedJobs,
   verifiyOtp,
   userRecommendationsJobs,
+  getUserFavoriteJobs,
+  get_Data_For_Apply_Job,
+  Apply_Job,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import { upload } from "../middleware/multer.middleware";
@@ -43,4 +46,12 @@ routes.post(
   getUserSavedJobs
 );
 routes.get("/user-applied-jobs", authenticateUser, getUserAppliedJobs);
+routes.get("/user-favorite-jobs", authenticateUser, getUserFavoriteJobs);
+routes.get(
+  "/get_Data_For_Apply_Job/:jobId",
+  authenticateUser,
+  get_Data_For_Apply_Job
+);
+
+routes.post("/apply-job/:jobId", authenticateUser, Apply_Job);
 export { routes as UserRoutes };

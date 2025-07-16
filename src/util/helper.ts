@@ -2,6 +2,17 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { attribute } from "../db/schema";
 
+interface MatchCalculation {
+  qualification: number;
+  streamBranch: number;
+  industry: number;
+  department: number;
+  experience: number;
+  salary: number;
+  location: number;
+  noticePeriod: number;
+}
+
 export const formatSalaryRange = (min: number, max: number) => {
   const formatAmount = (amount: number) => {
     if (amount >= 10000000) {
@@ -240,3 +251,112 @@ export const getStatusColor = (status: number): string => {
       return "secondary";
   }
 };
+
+export function getMatchStatus(percentage: number): string {
+  if (percentage >= 80) return "Excellent";
+  if (percentage >= 60) return "Good";
+  if (percentage >= 40) return "Fair";
+  return "Poor";
+}
+
+// Helper function to extract years from experience text
+export function extractYearsFromExperience(experience: string): number {
+  const match = experience.match(/(\d+)\s*(?:years?|yrs?)/i);
+  return match ? parseInt(match[1]) : 0;
+}
+
+// Helper function to calculate match percentages
+export function calculateMatchPercentages(
+  job: any,
+  user: any
+): MatchCalculation {
+  const matches: MatchCalculation = {
+    qualification: 0,
+    streamBranch: 0,
+    industry: 0,
+    department: 0,
+    experience: 0,
+    salary: 0,
+    location: 0,
+    noticePeriod: 0,
+  };
+
+  // Qualification match (simplified - you may need to implement proper logic)
+  if (job.qualifications && user.education) {
+    matches.qualification = 30; // Default partial match
+  }
+
+  // Stream/Branch match
+  if (job.streamBranch && user.education) {
+    const userEducation = user.education?.toLowerCase() || "";
+    const jobStreamBranch = job.streamBranch?.toLowerCase() || "";
+    if (
+      userEducation.includes(jobStreamBranch) ||
+      jobStreamBranch.includes(userEducation)
+    ) {
+      matches.streamBranch = 65;
+    } else {
+      matches.streamBranch = 30;
+    }
+  }
+
+  // Industry match
+  if (job.industry && user.industryId) {
+    if (job.industry === user.industryId) {
+      matches.industry = 100;
+    } else {
+      matches.industry = 30;
+    }
+  }
+
+  // Department match (using sector)
+  if (job.jobSector && user.sectorId) {
+    if (job.jobSector === user.sectorId) {
+      matches.department = 100;
+    } else {
+      matches.department = 30;
+    }
+  }
+
+  // Experience match
+  if (job.expMin !== undefined && job.expMax !== undefined && user.experience) {
+    const userExp = extractYearsFromExperience(user.experience);
+    if (userExp >= job.expMin && userExp <= job.expMax) {
+      matches.experience = 100;
+    } else if (userExp >= job.expMin - 1 && userExp <= job.expMax + 1) {
+      matches.experience = 65;
+    } else {
+      matches.experience = 30;
+    }
+  }
+
+  // Salary match (simplified)
+  matches.salary = 30; // Default partial match
+
+  // Location match
+  if (job.city && user.city) {
+    if (job.city === user.city) {
+      matches.location = 90;
+    } else if (job.state && user.state && job.state === user.state) {
+      matches.location = 60;
+    } else {
+      matches.location = 30;
+    }
+  }
+
+  // Notice period match
+  if (job.immediteJoin === 1) {
+    if (
+      user.noticePeriod &&
+      user.noticePeriod.toLowerCase().includes("immediate")
+    ) {
+      matches.noticePeriod = 100;
+    } else {
+      matches.noticePeriod = 50;
+    }
+  } else {
+    matches.noticePeriod = 100; // Default good match if no immediate joining required
+  }
+
+  return matches;
+}
