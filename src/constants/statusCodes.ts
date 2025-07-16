@@ -39,3 +39,22 @@ export const getStatusMessage = (code: StatusCodes): string => {
       return "Unknown Status Code";
   }
 };
+
+export const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".png",
+  ".jpg",
+  ".jpeg",
+];
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];

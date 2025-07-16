@@ -16,9 +16,15 @@ import {
   getUserFavoriteJobs,
   get_Data_For_Apply_Job,
   Apply_Job,
+  upload_Resume,
+  get_User_Resume,
+  download_Resume,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
-import { upload } from "../middleware/multer.middleware";
+import {
+  handleFileUploadErrors,
+  upload,
+} from "../middleware/multer.middleware";
 
 const routes = Router();
 routes.post("/get-otp", getOtpforUser);
@@ -39,12 +45,7 @@ routes.patch("/portfolio", authenticateUser, updateUserPortfolio);
 routes.patch("/awards", authenticateUser, updateUserAwards);
 routes.patch("/skills", authenticateUser, updateUserSkills);
 
-routes.post(
-  "/user-saved-jobs",
-  upload.single("profilePic"),
-  authenticateUser,
-  getUserSavedJobs
-);
+routes.post("/user-saved-jobs", authenticateUser, getUserSavedJobs);
 routes.get("/user-applied-jobs", authenticateUser, getUserAppliedJobs);
 routes.get("/user-favorite-jobs", authenticateUser, getUserFavoriteJobs);
 routes.get(
@@ -54,4 +55,12 @@ routes.get(
 );
 
 routes.post("/apply-job/:jobId", authenticateUser, Apply_Job);
+routes.post(
+  "/use-upload-resume",
+  authenticateUser,
+  upload.single("resume"),
+  upload_Resume
+);
+routes.get("/get_User_Resume", authenticateUser, get_User_Resume);
+routes.get("/download-resume/:filename", authenticateUser, download_Resume);
 export { routes as UserRoutes };

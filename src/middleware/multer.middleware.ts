@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction, Errback } from "express";
 import multer from "multer";
 import path from "path";
+import {
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES,
+} from "../constants/statusCodes";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -47,4 +51,12 @@ export const handleFileUploadErrors = (
     });
   }
   next();
+};
+
+export const validateFileType = (file: any): boolean => {
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+  const isValidExtension = ALLOWED_EXTENSIONS.includes(fileExtension);
+  const isValidMimeType = ALLOWED_MIME_TYPES.includes(file.mimetype);
+
+  return isValidExtension && isValidMimeType;
 };

@@ -13,7 +13,11 @@ import {
   tblWishlist,
 } from "../db/schema";
 import { and, desc, eq, ne, or, SQL, sql } from "drizzle-orm";
-import { STATUS_CODES } from "../constants/statusCodes";
+import {
+  ALLOWED_EXTENSIONS,
+  MAX_FILE_SIZE,
+  STATUS_CODES,
+} from "../constants/statusCodes";
 import { ErrorHandler } from "../util/errorHandler";
 import { ResponseHandler } from "../util/responseHandler";
 import { phoneSchema } from "../validations/user.validations";
@@ -29,6 +33,13 @@ import {
   getStatusColor,
   getTimeAgo,
 } from "../util/helper";
+import path from "path";
+import fs from "fs";
+import { promisify } from "util";
+import { validateFileType } from "../middleware/multer.middleware";
+import { getImageUrl } from "../util/getimageurl";
+
+const unlinkAsync = promisify(fs.unlink);
 
 interface RelatedJobsQuery {
   userId?: string;
@@ -1613,166 +1624,6 @@ export const getUserFavoriteJobsHandler = async (
   }
 };
 
-// Additional controller to add job to favorites
-// export const addJobToFavoritesHandler = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   try {
-//     const { jobId } = req.body;
-//     const userId = req.user?.id;
-
-//     if (!userId) {
-//       res.status(STATUS_CODES.BAD_REQUEST).json(
-//         new ResponseHandler({
-//           message: "User ID is required",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     if (!jobId) {
-//       res.status(STATUS_CODES.BAD_REQUEST).json(
-//         new ResponseHandler({
-//           message: "Job ID is required",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     const userIdNumber =
-//       typeof userId === "string" ? parseInt(userId) : (userId as number);
-//     const jobIdNumber =
-//       typeof jobId === "string" ? parseInt(jobId) : (jobId as number);
-
-//     // Check if job exists and is active
-//     const jobExists = await db
-//       .select({ id: tblJobPost.id })
-//       .from(tblJobPost)
-//       .where(and(eq(tblJobPost.id, jobIdNumber), eq(tblJobPost.status, 1)))
-//       .limit(1);
-
-//     if (jobExists.length === 0) {
-//       res.status(STATUS_CODES.NOT_FOUND).json(
-//         new ResponseHandler({
-//           message: "Job not found or inactive",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     // Check if already in favorites
-//     const existingFavorite = await db
-//       .select({ id: tblWishlist.id })
-//       .from(tblWishlist)
-//       .where(
-//         and(
-//           eq(tblWishlist.loginId, userIdNumber),
-//           eq(tblWishlist.jobId, jobIdNumber)
-//         )
-//       )
-//       .limit(1);
-
-//     if (existingFavorite.length > 0) {
-//       res.status(STATUS_CODES.CONFLICT).json(
-//         new ResponseHandler({
-//           message: "Job already in favorites",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     // Add to favorites
-//     await db.insert(tblWishlist).values({
-//       id: Math.floor(Math.random() * 1000000),
-//       loginId: userIdNumber,
-//       jobId: jobIdNumber,
-//     });
-
-//     res.status(STATUS_CODES.CREATED).json(
-//       new ResponseHandler({
-//         message: "Job added to favorites successfully",
-//         data: { jobId: jobIdNumber },
-//       }).toJSON()
-//     );
-//   } catch (error) {
-//     console.error("Error in addJobToFavoritesHandler:", error);
-//     res.status(STATUS_CODES.SERVER_ERROR).json(
-//       new ResponseHandler({
-//         message: "Internal server error",
-//         data: null,
-//       }).toJSON()
-//     );
-//   }
-// };
-
-// // Additional controller to remove job from favorites
-// export const removeJobFromFavoritesHandler = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   try {
-//     const { jobId } = req.params;
-//     const userId = req.user?.id;
-
-//     if (!userId) {
-//       res.status(STATUS_CODES.BAD_REQUEST).json(
-//         new ResponseHandler({
-//           message: "User ID is required",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     if (!jobId) {
-//       res.status(STATUS_CODES.BAD_REQUEST).json(
-//         new ResponseHandler({
-//           message: "Job ID is required",
-//           data: null,
-//         }).toJSON()
-//       );
-//       return;
-//     }
-
-//     const userIdNumber =
-//       typeof userId === "string" ? parseInt(userId) : (userId as number);
-//     const jobIdNumber =
-//       typeof jobId === "string" ? parseInt(jobId) : (jobId as number);
-
-//     // Remove from favorites
-//     const result = await db
-//       .delete(tblWishlist)
-//       .where(
-//         and(
-//           eq(tblWishlist.loginId, userIdNumber),
-//           eq(tblWishlist.jobId, jobIdNumber)
-//         )
-//       );
-
-//     res.status(STATUS_CODES.OK).json(
-//       new ResponseHandler({
-//         message: "Job removed from favorites successfully",
-//         data: { jobId: jobIdNumber },
-//       }).toJSON()
-//     );
-//   } catch (error) {
-//     console.error("Error in removeJobFromFavoritesHandler:", error);
-//     res.status(STATUS_CODES.SERVER_ERROR).json(
-//       new ResponseHandler({
-//         message: "Internal server error",
-//         data: null,
-//       }).toJSON()
-//     );
-//   }
-// };
-
 export const get_Data_For_Apply_JobHandler = async (
   req: Request,
   res: Response,
@@ -2277,6 +2128,312 @@ export const Apply_JobHandler = async (
     }
 
     // Pass to error handling middleware
+    next(error);
+  }
+};
+
+export const uploadResumeHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = Number(req.user?.id);
+    const file = req.file;
+
+    // Validate user authentication
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+      return;
+    }
+
+    // Validate file upload
+    if (!file) {
+      res.status(400).json({
+        success: false,
+        message: "No resume file uploaded",
+      });
+      return;
+    }
+
+    // Validate file type (extension and MIME type)
+    if (!validateFileType(file)) {
+      // Delete the uploaded file if invalid
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `Invalid file type. Allowed types: ${ALLOWED_EXTENSIONS.join(
+          ", "
+        )}`,
+      });
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      // Delete the uploaded file if too large
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `File too large. Maximum size: ${
+          MAX_FILE_SIZE / (1024 * 1024)
+        }MB`,
+      });
+      return;
+    }
+
+    // Verify user exists
+    const user = await db
+      .select({ id: tblUsers.id, username: tblUsers.username })
+      .from(tblUsers)
+      .where(eq(tblUsers.id, userId))
+      .limit(1);
+
+    if (!user || user.length === 0) {
+      // Delete the uploaded file if user doesn't exist
+      await unlinkAsync(file.path);
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    // Check if user already has a resume record
+    const existingResume = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    // Generate file path relative to your uploads directory
+    const relativePath = file.path.replace(/\\/g, "/"); // Convert backslashes to forward slashes
+    const fileName = file.filename;
+    const originalName = file.originalname;
+
+    if (existingResume && existingResume.length > 0) {
+      // Update existing resume record
+      const oldResume = existingResume[0];
+
+      // Delete old resume file if it exists
+      if (oldResume.cv && oldResume.cv !== "NULL") {
+        try {
+          const oldFilePath = path.join(process.cwd(), "uploads", oldResume.cv);
+          if (fs.existsSync(oldFilePath)) {
+            await unlinkAsync(oldFilePath);
+          }
+        } catch (error) {
+          console.warn("Could not delete old resume file:", error);
+        }
+      }
+
+      // Update the resume record
+      await db
+        .update(tblResume)
+        .set({
+          cv: fileName, // Store only filename, not full path
+          // You can add other fields here if needed from req.body
+        })
+        .where(eq(tblResume.candId, userId.toString()));
+
+      res.status(200).json({
+        success: true,
+        message: "Resume updated successfully",
+        data: {
+          fileName: fileName,
+          originalName: originalName,
+          filePath: relativePath,
+          fileSize: file.size,
+          uploadDate: new Date().toISOString(),
+        },
+      });
+    } else {
+      // Create new resume record
+      const resumeData = {
+        id: userId + Math.floor(Math.random() * 10),
+        candId: userId.toString(),
+        cv: fileName,
+        coverLetter: null,
+        skills: null,
+        location: null,
+        hobbies: null,
+        education: null,
+        experience: null,
+        portfolio: null,
+        language: null,
+        noticePeriod: null,
+        award: null,
+      };
+
+      await db.insert(tblResume).values(resumeData);
+
+      res.status(201).json({
+        success: true,
+        message: "Resume uploaded successfully",
+        data: {
+          fileName: fileName,
+          originalName: originalName,
+          filePath: relativePath,
+          fileSize: file.size,
+          uploadDate: new Date().toISOString(),
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error in uploadResumeHandler:", error);
+
+    // Clean up uploaded file on error
+    if (req.file) {
+      try {
+        await unlinkAsync(req.file.path);
+      } catch (unlinkError) {
+        console.warn("Could not delete uploaded file on error:", unlinkError);
+      }
+    }
+
+    // Handle specific database errors
+    if (error instanceof Error) {
+      if (error.message.includes("foreign key constraint")) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid user reference",
+        });
+        return;
+      }
+    }
+
+    next(error);
+  }
+};
+
+export const getUserResumeHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+      return;
+    }
+
+    const resume = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    if (!resume || resume.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "Resume not found",
+      });
+      return;
+    }
+
+    const resumeData = resume[0];
+
+    // Check if resume file exists
+    let fileExists = false;
+    let filePath = "";
+
+    if (resumeData.cv && resumeData.cv !== "NULL") {
+      filePath = path.join(process.cwd(), "uploads", resumeData.cv);
+      fileExists = fs.existsSync(filePath);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Resume retrieved successfully",
+      data: {
+        ...resumeData,
+        fileExists,
+        imageUrl: getImageUrl(resumeData.cv) || "",
+      },
+    });
+  } catch (error) {
+    console.error("Error in getUserResumeHandler:", error);
+    next(error);
+  }
+};
+
+// Helper function to download resume
+export const downloadResumeHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { filename } = req.params;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+      return;
+    }
+
+    // Verify the file belongs to the user
+    const resume = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    if (!resume || resume.length === 0 || resume[0].cv !== filename) {
+      res.status(404).json({
+        success: false,
+        message: "Resume not found or access denied",
+      });
+      return;
+    }
+
+    const filePath = path.join(process.cwd(), "uploads", filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({
+        success: false,
+        message: "Resume file not found",
+      });
+      return;
+    }
+
+    // Set appropriate headers for download
+    const fileExtension = path.extname(filename).toLowerCase();
+    let contentType = "application/octet-stream";
+
+    switch (fileExtension) {
+      case ".pdf":
+        contentType = "application/pdf";
+        break;
+      case ".doc":
+        contentType = "application/msword";
+        break;
+      case ".docx":
+        contentType =
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        break;
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error("Error in downloadResumeHandler:", error);
     next(error);
   }
 };

@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "6632a505-da96-4031-bfb5-ab15881c27ee",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "dc003d23-3553-4f35-aab9-f211896a210d",
+  "prevId": "ca0b0187-5ee2-4120-8930-519c329c82ea",
   "tables": {
     "attribute": {
       "name": "attribute",
@@ -40,9 +40,19 @@
         }
       },
       "indexes": {
+        "id": {
+          "name": "id",
+          "columns": [
+            "id"
+          ],
+          "isUnique": false
+        },
         "name": {
           "name": "name",
-          "columns": ["name", "parent_id"],
+          "columns": [
+            "name",
+            "parent_id"
+          ],
           "isUnique": false
         }
       },
@@ -50,7 +60,9 @@
       "compositePrimaryKeys": {
         "attribute_id": {
           "name": "attribute_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -129,7 +141,9 @@
       "compositePrimaryKeys": {
         "blog_id": {
           "name": "blog_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -180,7 +194,9 @@
       "compositePrimaryKeys": {
         "blog_category_id": {
           "name": "blog_category_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -222,7 +238,10 @@
       "indexes": {
         "state_id": {
           "name": "state_id",
-          "columns": ["state_id", "con_id"],
+          "columns": [
+            "state_id",
+            "con_id"
+          ],
           "isUnique": false
         }
       },
@@ -230,7 +249,9 @@
       "compositePrimaryKeys": {
         "cities_id": {
           "name": "cities_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -271,7 +292,10 @@
       "indexes": {
         "id_name": {
           "name": "id_name",
-          "columns": ["id", "name"],
+          "columns": [
+            "id",
+            "name"
+          ],
           "isUnique": false
         }
       },
@@ -279,7 +303,9 @@
       "compositePrimaryKeys": {
         "countries_id": {
           "name": "countries_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -315,7 +341,9 @@
       "compositePrimaryKeys": {
         "jobpostIp_id": {
           "name": "jobpostIp_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -351,7 +379,9 @@
       "compositePrimaryKeys": {
         "jobsdescriptions_id": {
           "name": "jobsdescriptions_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -493,7 +523,9 @@
       "compositePrimaryKeys": {
         "megaMenu_id": {
           "name": "megaMenu_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -529,7 +561,9 @@
       "compositePrimaryKeys": {
         "site_setting_id": {
           "name": "site_setting_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -566,7 +600,9 @@
       "compositePrimaryKeys": {
         "states_id": {
           "name": "states_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -646,7 +682,9 @@
       "compositePrimaryKeys": {
         "tbl_admin_admin_id": {
           "name": "tbl_admin_admin_id",
-          "columns": ["admin_id"]
+          "columns": [
+            "admin_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -705,7 +743,9 @@
       "compositePrimaryKeys": {
         "tbl_ads_id": {
           "name": "tbl_ads_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -758,7 +798,9 @@
       "compositePrimaryKeys": {
         "tbl_cat_sector_id": {
           "name": "tbl_cat_sector_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -822,7 +864,9 @@
       "compositePrimaryKeys": {
         "tbl_contact_id": {
           "name": "tbl_contact_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -836,7 +880,7 @@
           "type": "int",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "cand_id": {
           "name": "cand_id",
@@ -907,7 +951,9 @@
       "compositePrimaryKeys": {
         "tbl_job_apply_id": {
           "name": "tbl_job_apply_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1209,7 +1255,9 @@
       "compositePrimaryKeys": {
         "tbl_job_post_id": {
           "name": "tbl_job_post_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1259,7 +1307,9 @@
       "compositePrimaryKeys": {
         "tbl_msg_id": {
           "name": "tbl_msg_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1305,7 +1355,9 @@
       "compositePrimaryKeys": {
         "tbl_notification_id": {
           "name": "tbl_notification_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1319,7 +1371,7 @@
           "type": "int",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "cand_id": {
           "name": "cand_id",
@@ -1423,7 +1475,9 @@
       "compositePrimaryKeys": {
         "tbl_resume_id": {
           "name": "tbl_resume_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1459,7 +1513,9 @@
       "compositePrimaryKeys": {
         "tbl_saved_id": {
           "name": "tbl_saved_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1510,7 +1566,9 @@
       "compositePrimaryKeys": {
         "tbl_search_id": {
           "name": "tbl_search_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1562,7 +1620,9 @@
       "compositePrimaryKeys": {
         "tbl_seo_id": {
           "name": "tbl_seo_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1614,7 +1674,9 @@
       "compositePrimaryKeys": {
         "tbl_subscribe_id": {
           "name": "tbl_subscribe_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1651,6 +1713,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "device_fcm": {
+          "name": "device_fcm",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'NULL'"
         },
         "fb_id": {
           "name": "fb_id",
@@ -1960,7 +2030,9 @@
       "compositePrimaryKeys": {
         "tbl_users_id": {
           "name": "tbl_users_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1998,7 +2070,9 @@
       "compositePrimaryKeys": {
         "tbl_wishlist_id": {
           "name": "tbl_wishlist_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2048,7 +2122,9 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "uniqueConstraints": {},

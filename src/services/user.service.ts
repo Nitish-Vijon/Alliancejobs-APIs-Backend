@@ -15,6 +15,9 @@ import {
   getUserFavoriteJobsHandler,
   get_Data_For_Apply_JobHandler,
   Apply_JobHandler,
+  uploadResumeHandler,
+  getUserResumeHandler,
+  downloadResumeHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -94,3 +97,18 @@ export const get_Data_For_Apply_Job = tryCatch(
 );
 
 export const Apply_Job = tryCatch("Apply to Job", Apply_JobHandler);
+
+export const upload_Resume = tryCatch(
+  "Upload User Resume",
+  uploadResumeHandler
+);
+
+export const get_User_Resume = tryCatch(
+  "Get User Resume",
+  getUserResumeHandler
+);
+
+export const download_Resume = tryCatch(
+  "Download User Resume",
+  downloadResumeHandler
+);
