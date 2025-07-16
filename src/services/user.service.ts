@@ -12,6 +12,18 @@ import {
   updateUserAwardsHandler,
   updateUserSkillsHandler,
   getJobRecommendationsHandler,
+  getUserEducationHandler,
+  addUserEducationHandler,
+  deleteUserEducationHandler,
+  addUserExperienceHandler,
+  deleteUserExperienceHandler,
+  getUserExperienceHandler,
+  deleteUserPortfolioHandler,
+  addUserPortfolioHandler,
+  getUserPortfolioHandler,
+  getUserAwardsHandler,
+  addUserAwardHandler,
+  deleteUserAwardHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -78,4 +90,58 @@ export const getUserSavedJobs = tryCatch(
 export const getUserAppliedJobs = tryCatch(
   "Get User Applied Jobs",
   getUserAppliedJobsHandler
+);
+
+export const getUserEducation = tryCatch(
+  "Get User Education",
+  getUserEducationHandler
+);
+
+export const deleteUserEducation = tryCatch(
+  "Delete User Education",
+  deleteUserEducationHandler
+);
+
+export const addUserEducation = tryCatch(
+  "Add User Education",
+  addUserEducationHandler
+);
+
+export const getUserExperience = tryCatch(
+  "Get User Experience",
+  getUserExperienceHandler
+);
+
+export const addUserExperience = tryCatch(
+  "Add User Experience",
+  addUserExperienceHandler
+);
+
+export const deleteUserExperience = tryCatch(
+  "Delete User Experience",
+  deleteUserExperienceHandler
+);
+
+export const getUserPortfolio = tryCatch(
+  "Get User Portfolio",
+  getUserPortfolioHandler
+);
+
+export const addUserPortfolio = tryCatch(
+  "Add User Portfolio",
+  addUserPortfolioHandler
+);
+
+export const deleteUserPortfolio = tryCatch(
+  "Delete User Portfolio",
+  deleteUserPortfolioHandler
+);
+
+export const getUserAwards = tryCatch("Get User Awards", getUserAwardsHandler);
+
+export const addUserAward = tryCatch("Add User Award", addUserAwardHandler);
+
+export const deleteUserAward = tryCatch(
+  "Delete User Award",
+  deleteUserAwardHandler
 );
