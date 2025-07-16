@@ -19,6 +19,18 @@ import {
   upload_Resume,
   get_User_Resume,
   download_Resume,
+  getUserEducation,
+  deleteUserEducation,
+  addUserEducation,
+  getUserExperience,
+  addUserExperience,
+  deleteUserExperience,
+  getUserPortfolio,
+  addUserPortfolio,
+  deleteUserPortfolio,
+  getUserAwards,
+  addUserAward,
+  deleteUserAward,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -39,10 +51,6 @@ routes.get(
 routes.get("/user-recommendations", authenticateUser, userRecommendationsJobs);
 routes.patch("/basic-info", authenticateUser, updateUserBasicInfo);
 routes.patch("/address", authenticateUser, updateUserAddress);
-routes.patch("/education", authenticateUser, updateUserEducation);
-routes.patch("/experience", authenticateUser, updateUserExperience);
-routes.patch("/portfolio", authenticateUser, updateUserPortfolio);
-routes.patch("/awards", authenticateUser, updateUserAwards);
 routes.patch("/skills", authenticateUser, updateUserSkills);
 
 routes.post("/user-saved-jobs", authenticateUser, getUserSavedJobs);
@@ -63,4 +71,29 @@ routes.post(
 );
 routes.get("/get_User_Resume", authenticateUser, get_User_Resume);
 routes.get("/download-resume/:filename", authenticateUser, download_Resume);
+
+// Education Routes
+routes.patch("/education", authenticateUser, updateUserEducation);
+routes.get("/education", authenticateUser, getUserEducation);
+routes.post("/education", authenticateUser, addUserEducation);
+routes.delete("/education", authenticateUser, deleteUserEducation);
+
+// Experience Routes
+routes.patch("/experience", authenticateUser, updateUserExperience);
+routes.get("/experience", authenticateUser, getUserExperience);
+routes.post("/experience", authenticateUser, addUserExperience);
+routes.delete("/experience", authenticateUser, deleteUserExperience);
+
+// Portfolio Routes
+routes.patch("/portfolio", authenticateUser, updateUserPortfolio);
+routes.get("/portfolio", authenticateUser, getUserPortfolio);
+routes.post("/portfolio", authenticateUser, addUserPortfolio);
+routes.delete("/portfolio", authenticateUser, deleteUserPortfolio);
+
+// Awards Routes
+routes.patch("/awards", authenticateUser, updateUserAwards);
+routes.get("/awards", authenticateUser, getUserAwards);
+routes.post("/awards", authenticateUser, addUserAward);
+routes.delete("/awards", authenticateUser, deleteUserAward);
+
 export { routes as UserRoutes };

@@ -11,6 +11,7 @@ import {
   countries,
   tblJobApply,
   tblWishlist,
+  attribute,
 } from "../db/schema";
 import { and, desc, eq, ne, or, SQL, sql } from "drizzle-orm";
 import {
@@ -1143,246 +1144,6 @@ export const updateUserAddressHandler = async (
   }
 };
 
-// Handler for Step 3: Education
-export const updateUserEducationHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const id = req.user?.id; // Assuming userId is passed as a URL parameter
-    const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { education } = req.body; // Expecting an array of education objects
-
-    if (!userId) {
-      throw new ErrorHandler({
-        message: "User ID is required.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-    if (!education || !Array.isArray(education)) {
-      throw new ErrorHandler({
-        message: "Education data must be an array.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-
-    const parsedUserId = parseInt(userId.toString());
-
-    // 1. Verify the user exists in the main users table
-    const [user] = await db
-      .select({ id: tblUsers.id })
-      .from(tblUsers)
-      .where(eq(tblUsers.id, parsedUserId));
-    if (!user) {
-      throw new ErrorHandler({
-        message: "User not found.",
-        status: STATUS_CODES.NOT_FOUND,
-      });
-    }
-
-    // 2. Convert the education array to a JSON string
-    // NOTE: This assumes your database column can store a long text string.
-    const educationJsonString = JSON.stringify(education);
-
-    // 3. Check if a resume record already exists for this user
-    const [existingResume] = await db
-      .select({ candId: tblResume.candId })
-      .from(tblResume)
-      .where(eq(tblResume.candId, parsedUserId.toString()));
-
-    if (existingResume) {
-      // 4a. If resume exists, UPDATE it with the new education JSON
-      await db
-        .update(tblResume)
-        .set({ education: educationJsonString }) // Assuming the column is named 'education'
-        .where(eq(tblResume.candId, parsedUserId.toString()));
-    } else {
-      // 4b. If resume does not exist, INSERT a new record
-      await db.insert(tblResume).values({
-        id: Math.floor(Math.random() * 1000000),
-        candId: parsedUserId.toString(),
-        education: educationJsonString,
-      });
-    }
-
-    res.status(STATUS_CODES.OK).json(
-      new ResponseHandler({
-        message: "Education details updated successfully.",
-      }).toJSON()
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-
-// A helper function to reduce repetition
-const upsertResumeData = async (userId: number, data: Record<string, any>) => {
-  const [existingResume] = await db
-    .select({ candId: tblResume.candId })
-    .from(tblResume)
-    .where(eq(tblResume.candId, userId.toString()));
-
-  if (existingResume) {
-    await db
-      .update(tblResume)
-      .set(data)
-      .where(eq(tblResume.candId, userId.toString()));
-  } else {
-    await db.insert(tblResume).values({
-      id: Math.floor(Math.random() * 1000000),
-      candId: userId.toString(),
-      ...data,
-    });
-  }
-};
-
-// Handler for Step 4: Experience
-export const updateUserExperienceHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const id = req.user?.id; // Assuming userId is passed as a URL parameter
-    const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { experience } = req.body;
-
-    if (!userId || !experience || !Array.isArray(experience)) {
-      throw new ErrorHandler({
-        message: "User ID and experience array are required.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-    const parsedUserId = parseInt(userId.toString());
-
-    await upsertResumeData(parsedUserId, {
-      experience: JSON.stringify(experience),
-    });
-
-    res.status(STATUS_CODES.OK).json(
-      new ResponseHandler({
-        message: "Experience details updated successfully.",
-      }).toJSON()
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Handler for Step 5: Portfolio
-export const updateUserPortfolioHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const id = req.user?.id; // Assuming userId is passed as a URL parameter
-    const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { portfolio } = req.body;
-
-    if (!userId || !portfolio || !Array.isArray(portfolio)) {
-      throw new ErrorHandler({
-        message: "User ID and portfolio array are required.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-    const parsedUserId = parseInt(userId.toString());
-
-    await upsertResumeData(parsedUserId, {
-      portfolio: JSON.stringify(portfolio),
-    });
-
-    res.status(STATUS_CODES.OK).json(
-      new ResponseHandler({
-        message: "Portfolio updated successfully.",
-      }).toJSON()
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Handler for Step 5: Honors or Awards
-export const updateUserAwardsHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const id = req.user?.id; // Assuming userId is passed as a URL parameter
-    const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { awards } = req.body;
-
-    if (!userId || !awards || !Array.isArray(awards)) {
-      throw new ErrorHandler({
-        message: "User ID and awards array are required.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-    const parsedUserId = parseInt(userId.toString());
-
-    await upsertResumeData(parsedUserId, { award: JSON.stringify(awards) }); // Note: schema column is 'award'
-
-    res.status(STATUS_CODES.OK).json(
-      new ResponseHandler({
-        message: "Awards updated successfully.",
-      }).toJSON()
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Handler for Step 6: Skills
-export const updateUserSkillsHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const id = req.user?.id; // Assuming userId is passed as a URL parameter
-    const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { skills } = req.body;
-
-    if (!userId || !skills) {
-      throw new ErrorHandler({
-        message: "User ID and skills object are required.",
-        status: STATUS_CODES.BAD_REQUEST,
-      });
-    }
-    const parsedUserId = parseInt(userId.toString());
-
-    // Convert arrays to comma-separated strings for skills that come from API
-    // Keep manual fields as simple text
-    const skillsData = {
-      skills: Array.isArray(skills.jobSkills)
-        ? skills.jobSkills.join(",")
-        : skills.jobSkills,
-      language: Array.isArray(skills.language)
-        ? skills.language.join(",")
-        : skills.language, // Manual input
-      location: Array.isArray(skills.preferredJobLocation)
-        ? skills.preferredJobLocation.join(",")
-        : skills.preferredJobLocation,
-      hobbies: Array.isArray(skills.hobbies)
-        ? skills.hobbies.join(",")
-        : skills.hobbies, // Manual input
-      noticePeriod: skills.noticePeriod, // Manual input
-    };
-
-    await upsertResumeData(parsedUserId, skillsData);
-
-    res.status(STATUS_CODES.OK).json(
-      new ResponseHandler({
-        message: "Skills updated successfully.",
-      }).toJSON()
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const getUserFavoriteJobsHandler = async (
   req: Request,
   res: Response,
@@ -2435,5 +2196,1510 @@ export const downloadResumeHandler = async (
   } catch (error) {
     console.error("Error in downloadResumeHandler:", error);
     next(error);
+  }
+};
+
+// Handler for Step 3: Education
+export const updateUserEducationHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id; // Assuming userId is passed as a URL parameter
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { education } = req.body; // Expecting an array of education objects
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+    if (!education || !Array.isArray(education)) {
+      throw new ErrorHandler({
+        message: "Education data must be an array.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // 1. Verify the user exists in the main users table
+    const [user] = await db
+      .select({ id: tblUsers.id })
+      .from(tblUsers)
+      .where(eq(tblUsers.id, parsedUserId));
+    if (!user) {
+      throw new ErrorHandler({
+        message: "User not found.",
+        status: STATUS_CODES.NOT_FOUND,
+      });
+    }
+
+    // 2. Convert the education array to a JSON string
+    // NOTE: This assumes your database column can store a long text string.
+    const educationJsonString = JSON.stringify(education);
+
+    // 3. Check if a resume record already exists for this user
+    const [existingResume] = await db
+      .select({ candId: tblResume.candId })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    if (existingResume) {
+      // 4a. If resume exists, UPDATE it with the new education JSON
+      await db
+        .update(tblResume)
+        .set({ education: educationJsonString }) // Assuming the column is named 'education'
+        .where(eq(tblResume.candId, parsedUserId.toString()));
+    } else {
+      // 4b. If resume does not exist, INSERT a new record
+      await db.insert(tblResume).values({
+        id: Math.floor(Math.random() * 1000000),
+        candId: parsedUserId.toString(),
+        education: educationJsonString,
+      });
+    }
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Education details updated successfully.",
+        data: {
+          education: education,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+// Handler to get user education
+export const getUserEducationHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get user's resume data
+    const [resume] = await db
+      .select({ education: tblResume.education })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let educationData = [];
+
+    if (resume && resume.education) {
+      try {
+        educationData = JSON.parse(resume.education);
+      } catch (error) {
+        console.error("Error parsing education JSON:", error);
+        educationData = [];
+      }
+    }
+
+    // Get all unique IDs from education data that need to be converted
+    const allIds = new Set<number>();
+    educationData.forEach((edu: any) => {
+      // Check Education field
+      if (edu.Education && !isNaN(parseInt(edu.Education))) {
+        allIds.add(parseInt(edu.Education));
+      }
+      // Check Stream field
+      if (edu.Stream && !isNaN(parseInt(edu.Stream))) {
+        allIds.add(parseInt(edu.Stream));
+      }
+      // Check Institute field (in case it's also an ID)
+      if (edu.Institute && !isNaN(parseInt(edu.Institute))) {
+        allIds.add(parseInt(edu.Institute));
+      }
+      // Check Institute_Name field (in case it's also an ID)
+      if (edu.Institute_Name && !isNaN(parseInt(edu.Institute_Name))) {
+        allIds.add(parseInt(edu.Institute_Name));
+      }
+    });
+
+    // Get ALL attributes from the table for comprehensive mapping
+    let attributeMap: Record<number, string> = {};
+    if (allIds.size > 0) {
+      const attributes = await db
+        .select({
+          id: attribute.id,
+          name: attribute.name,
+        })
+        .from(attribute);
+
+      attributeMap = attributes.reduce((acc, attr) => {
+        acc[attr.id] = attr.name || "Unknown";
+        return acc;
+      }, {} as Record<number, string>);
+    }
+
+    // Helper function to convert ID to name with better fallback
+    const getAttributeName = (value: string | number): string => {
+      if (!value) return "";
+
+      // If it's already a string and not a number, return as is
+      if (typeof value === "string" && isNaN(parseInt(value))) {
+        return value;
+      }
+
+      const numId = typeof value === "string" ? parseInt(value) : value;
+      if (isNaN(numId)) return value.toString();
+
+      // Return the mapped name or the original value if no mapping found
+      return attributeMap[numId] || value.toString();
+    };
+
+    // Format the education data for response - keeping only existing fields
+    const formattedEducation = educationData.map((edu: any, index: number) => ({
+      id: index, // Using index as ID for frontend reference
+      isCompleted: edu.isCompleted !== undefined ? edu.isCompleted : true,
+      originalData: {
+        // Convert IDs to names in originalData
+        Education: getAttributeName(edu.Education),
+        Stream: getAttributeName(edu.Stream),
+        Start_Date: edu.Start_Date,
+        End_Date: edu.End_Date,
+        Institute: getAttributeName(edu.Institute),
+        Institute_Name: getAttributeName(edu.Institute_Name),
+        // Keep any other fields as they are
+        ...Object.keys(edu).reduce((acc, key) => {
+          if (
+            ![
+              "Education",
+              "Stream",
+              "Start_Date",
+              "End_Date",
+              "Institute",
+              "Institute_Name",
+            ].includes(key)
+          ) {
+            acc[key] = getAttributeName(edu[key]);
+          }
+          return acc;
+        }, {} as any),
+      },
+    }));
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message:
+          educationData.length > 0
+            ? "Education details retrieved successfully."
+            : "No education details found.",
+        data: {
+          education: formattedEducation,
+          totalRecords: formattedEducation.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to delete user education by index
+export const deleteUserEducationHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { educationData } = req.body; // Send the complete education object to delete
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!educationData) {
+      throw new ErrorHandler({
+        message: "Education data is required to identify the entry to delete.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current education data
+    const [resume] = await db
+      .select({ education: tblResume.education })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentEducation = [];
+
+    if (resume && resume.education) {
+      try {
+        currentEducation = JSON.parse(resume.education);
+      } catch (error) {
+        throw new ErrorHandler({
+          message: "Error parsing existing education data.",
+          status: STATUS_CODES.SERVER_ERROR,
+        });
+      }
+    }
+
+    if (currentEducation.length === 0) {
+      throw new ErrorHandler({
+        message: "No education entries found to delete.",
+        status: STATUS_CODES.NOT_FOUND,
+      });
+    }
+
+    // Find and remove the education entry based on multiple criteria
+    const initialLength = currentEducation.length;
+
+    // Method 1: Find by exact match of key fields (updated field names)
+    currentEducation = currentEducation.filter((edu: any) => {
+      const matches =
+        edu.Education === educationData.Education &&
+        edu.Institute === educationData.Institute &&
+        edu.Start_Date === educationData.Start_Date &&
+        edu.End_Date === educationData.End_Date;
+
+      return !matches; // Keep entries that don't match
+    });
+
+    // If no exact match found, try partial matching with Education and Institute
+    if (currentEducation.length === initialLength) {
+      currentEducation = currentEducation.filter((edu: any) => {
+        const partialMatch =
+          edu.Education === educationData.Education &&
+          edu.Institute === educationData.Institute;
+
+        return !partialMatch; // Keep entries that don't match
+      });
+    }
+
+    // If still no match, try matching with Education and Stream (fallback)
+    if (currentEducation.length === initialLength) {
+      currentEducation = currentEducation.filter((edu: any) => {
+        const streamMatch =
+          edu.Education === educationData.Education &&
+          edu.Stream === educationData.Stream;
+
+        return !streamMatch; // Keep entries that don't match
+      });
+    }
+
+    // Check if any entry was actually deleted
+    if (currentEducation.length === initialLength) {
+      throw new ErrorHandler({
+        message:
+          "Education entry not found or could not be identified for deletion. Please ensure the education data matches exactly.",
+        status: STATUS_CODES.NOT_FOUND,
+        data: {
+          searchedFor: educationData,
+          availableEducations: currentEducation.map((edu: any) => ({
+            Education: edu.Education,
+            Institute: edu.Institute,
+            Start_Date: edu.Start_Date,
+            End_Date: edu.End_Date,
+          })),
+        },
+      });
+    }
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      education: JSON.stringify(currentEducation),
+    });
+
+    const deletedCount = initialLength - currentEducation.length;
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: `Education entry deleted successfully. ${deletedCount} entry(ies) removed.`,
+        data: {
+          deletedCount,
+          remainingEducationCount: currentEducation.length,
+          deletedEducationData: educationData,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to add new education entry
+export const addUserEducationHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { educationData } = req.body;
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!educationData) {
+      throw new ErrorHandler({
+        message: "Education data is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current education data
+    const [resume] = await db
+      .select({ education: tblResume.education })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentEducation = [];
+
+    if (resume && resume.education) {
+      try {
+        currentEducation = JSON.parse(resume.education);
+      } catch (error) {
+        currentEducation = [];
+      }
+    }
+
+    // Add new education entry
+    const newEducation = {
+      ...educationData,
+    };
+
+    currentEducation.push(newEducation);
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      education: JSON.stringify(currentEducation),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Education entry added successfully.",
+        data: {
+          newEducation,
+          educationIndex: currentEducation.length - 1,
+          totalEducationCount: currentEducation.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler for Step 4: Experience
+export const updateUserExperienceHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id; // Assuming userId is passed as a URL parameter
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { experience } = req.body;
+
+    if (!userId || !experience || !Array.isArray(experience)) {
+      throw new ErrorHandler({
+        message: "User ID and experience array are required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+    const parsedUserId = parseInt(userId.toString());
+
+    await upsertResumeData(parsedUserId, {
+      experience: JSON.stringify(experience),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Experience details updated successfully.",
+        data: {
+          experience: experience,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to get user experience
+export const getUserExperienceHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get user's resume data
+    const [resume] = await db
+      .select({ experience: tblResume.experience })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let experienceData = [];
+
+    if (resume && resume.experience) {
+      try {
+        experienceData = JSON.parse(resume.experience);
+        // Handle nested array structure if it exists
+        if (
+          Array.isArray(experienceData) &&
+          experienceData.length > 0 &&
+          Array.isArray(experienceData[0])
+        ) {
+          experienceData = experienceData[0]; // Extract from nested array
+        }
+      } catch (error) {
+        console.error("Error parsing experience JSON:", error);
+        experienceData = [];
+      }
+    }
+
+    // Get all unique IDs from experience data that need to be converted
+    const allIds = new Set<number>();
+    experienceData.forEach((exp: any) => {
+      // Check industry field
+      if (exp.industry && !isNaN(parseInt(exp.industry))) {
+        allIds.add(parseInt(exp.industry));
+      }
+      // Check sector field
+      if (exp.sector && !isNaN(parseInt(exp.sector))) {
+        allIds.add(parseInt(exp.sector));
+      }
+      // Check job_type field
+      if (exp.job_type && !isNaN(parseInt(exp.job_type))) {
+        allIds.add(parseInt(exp.job_type));
+      }
+      // Check Career_Level field
+      if (exp.Career_Level && !isNaN(parseInt(exp.Career_Level))) {
+        allIds.add(parseInt(exp.Career_Level));
+      }
+      // Check Salary_Type field
+      if (exp.Salary_Type && !isNaN(parseInt(exp.Salary_Type))) {
+        allIds.add(parseInt(exp.Salary_Type));
+      }
+    });
+
+    // Get ALL attributes from the table for comprehensive mapping
+    let attributeMap: Record<number, string> = {};
+    if (allIds.size > 0) {
+      const attributes = await db
+        .select({
+          id: attribute.id,
+          name: attribute.name,
+        })
+        .from(attribute);
+
+      attributeMap = attributes.reduce((acc, attr) => {
+        acc[attr.id] = attr.name || "Unknown";
+        return acc;
+      }, {} as Record<number, string>);
+    }
+
+    // Helper function to convert ID to name with better fallback
+    const getAttributeName = (value: string | number): string => {
+      if (!value) return "";
+
+      // If it's already a string and not a number, return as is
+      if (typeof value === "string" && isNaN(parseInt(value))) {
+        return value;
+      }
+
+      const numId = typeof value === "string" ? parseInt(value) : value;
+      if (isNaN(numId)) return value.toString();
+
+      // Return the mapped name or the original value if no mapping found
+      return attributeMap[numId] || value.toString();
+    };
+
+    // Format the experience data for response - keeping only existing fields
+    const formattedExperience = experienceData.map(
+      (exp: any, index: number) => ({
+        id: index, // Using index as ID for frontend reference
+        originalData: {
+          // Convert IDs to names in originalData
+          industry: getAttributeName(exp.industry),
+          sector: getAttributeName(exp.sector),
+          Company: exp.Company || "Not specified",
+          Designation: exp.Designation || "Not specified",
+          job_type: getAttributeName(exp.job_type),
+          Career_Level: getAttributeName(exp.Career_Level),
+          Start_Date: exp.Start_Date || "Not specified",
+          End_Date: exp.End_Date || "Not specified",
+          Experience: exp.Experience || "Not specified",
+          Salary_Type: getAttributeName(exp.Salary_Type),
+          Salary: exp.Salary || "Not specified",
+          Role: exp.Role || "Not specified",
+          // Keep any other fields as they are
+          ...Object.keys(exp).reduce((acc, key) => {
+            if (
+              ![
+                "industry",
+                "sector",
+                "Company",
+                "Designation",
+                "job_type",
+                "Career_Level",
+                "Start_Date",
+                "End_Date",
+                "Experience",
+                "Salary_Type",
+                "Salary",
+                "Role",
+              ].includes(key)
+            ) {
+              acc[key] = getAttributeName(exp[key]);
+            }
+            return acc;
+          }, {} as any),
+        },
+      })
+    );
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message:
+          experienceData.length > 0
+            ? "Experience details retrieved successfully."
+            : "No experience details found.",
+        data: {
+          experience: formattedExperience,
+          totalRecords: formattedExperience.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to add new experience entry
+export const addUserExperienceHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { experienceData } = req.body;
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!experienceData) {
+      throw new ErrorHandler({
+        message: "Experience data is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current experience data
+    const [resume] = await db
+      .select({ experience: tblResume.experience })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentExperience = [];
+
+    if (resume && resume.experience) {
+      try {
+        currentExperience = JSON.parse(resume.experience);
+        // Handle nested array structure if it exists
+        if (
+          Array.isArray(currentExperience) &&
+          currentExperience.length > 0 &&
+          Array.isArray(currentExperience[0])
+        ) {
+          currentExperience = currentExperience[0]; // Extract from nested array
+        }
+      } catch (error) {
+        currentExperience = [];
+      }
+    }
+
+    // Add new experience entry
+    const newExperience = {
+      ...experienceData,
+    };
+
+    currentExperience.push(newExperience);
+
+    // Update in database (wrap in array to maintain structure)
+    await upsertResumeData(parsedUserId, {
+      experience: JSON.stringify([currentExperience]),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Experience entry added successfully.",
+        data: {
+          newExperience,
+          experienceIndex: currentExperience.length - 1,
+          totalExperienceCount: currentExperience.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to delete user experience entry
+export const deleteUserExperienceHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { experienceData } = req.body; // Send the complete experience object to delete
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!experienceData) {
+      throw new ErrorHandler({
+        message: "Experience data is required to identify the entry to delete.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current experience data
+    const [resume] = await db
+      .select({ experience: tblResume.experience })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentExperience = [];
+
+    if (resume && resume.experience) {
+      try {
+        currentExperience = JSON.parse(resume.experience);
+        // Handle nested array structure if it exists
+        if (
+          Array.isArray(currentExperience) &&
+          currentExperience.length > 0 &&
+          Array.isArray(currentExperience[0])
+        ) {
+          currentExperience = currentExperience[0]; // Extract from nested array
+        }
+      } catch (error) {
+        throw new ErrorHandler({
+          message: "Error parsing existing experience data.",
+          status: STATUS_CODES.SERVER_ERROR,
+        });
+      }
+    }
+
+    if (currentExperience.length === 0) {
+      throw new ErrorHandler({
+        message: "No experience entries found to delete.",
+        status: STATUS_CODES.NOT_FOUND,
+      });
+    }
+
+    // Find and remove the experience entry based on multiple criteria
+    const initialLength = currentExperience.length;
+
+    // Method 1: Find by exact match of key fields
+    currentExperience = currentExperience.filter((exp: any) => {
+      const matches =
+        exp.Company === experienceData.Company &&
+        exp.Designation === experienceData.Designation &&
+        exp.Start_Date === experienceData.Start_Date &&
+        exp.End_Date === experienceData.End_Date;
+
+      return !matches; // Keep entries that don't match
+    });
+
+    // If no exact match found, try partial matching with Company and Designation
+    if (currentExperience.length === initialLength) {
+      currentExperience = currentExperience.filter((exp: any) => {
+        const partialMatch =
+          exp.Company === experienceData.Company &&
+          exp.Designation === experienceData.Designation;
+
+        return !partialMatch; // Keep entries that don't match
+      });
+    }
+
+    // If still no match, try matching with Company and Start_Date (fallback)
+    if (currentExperience.length === initialLength) {
+      currentExperience = currentExperience.filter((exp: any) => {
+        const fallbackMatch =
+          exp.Company === experienceData.Company &&
+          exp.Start_Date === experienceData.Start_Date;
+
+        return !fallbackMatch; // Keep entries that don't match
+      });
+    }
+
+    // Check if any entry was actually deleted
+    if (currentExperience.length === initialLength) {
+      throw new ErrorHandler({
+        message:
+          "Experience entry not found or could not be identified for deletion. Please ensure the experience data matches exactly.",
+        status: STATUS_CODES.NOT_FOUND,
+        data: {
+          searchedFor: experienceData,
+          availableExperience: currentExperience.map((exp: any) => ({
+            Company: exp.Company,
+            Designation: exp.Designation,
+            Start_Date: exp.Start_Date,
+            End_Date: exp.End_Date,
+          })),
+        },
+      });
+    }
+
+    // Update in database (wrap in array to maintain structure)
+    await upsertResumeData(parsedUserId, {
+      experience: JSON.stringify([currentExperience]),
+    });
+
+    const deletedCount = initialLength - currentExperience.length;
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: `Experience entry deleted successfully. ${deletedCount} entry(ies) removed.`,
+        data: {
+          deletedCount,
+          remainingExperienceCount: currentExperience.length,
+          deletedExperienceData: experienceData,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler for Step 5: Portfolio
+export const updateUserPortfolioHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id; // Assuming userId is passed as a URL parameter
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { portfolio } = req.body;
+
+    if (!userId || !portfolio || !Array.isArray(portfolio)) {
+      throw new ErrorHandler({
+        message: "User ID and portfolio array are required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+    const parsedUserId = parseInt(userId.toString());
+
+    await upsertResumeData(parsedUserId, {
+      portfolio: JSON.stringify(portfolio),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Portfolio updated successfully.",
+        data: {
+          portfolio: portfolio,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserPortfolioHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get user's resume data
+    const [resume] = await db
+      .select({ portfolio: tblResume.portfolio })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let portfolioData = [];
+
+    if (resume && resume.portfolio) {
+      try {
+        portfolioData = JSON.parse(resume.portfolio);
+      } catch (error) {
+        console.error("Error parsing portfolio JSON:", error);
+        portfolioData = [];
+      }
+    }
+
+    // Format the portfolio data for response - keeping only existing fields
+    const formattedPortfolio = portfolioData.map(
+      (portfolio: any, index: number) => ({
+        id: index, // Using index as ID for frontend reference
+        originalData: {
+          Title: portfolio.Title || "Not specified",
+          Url: portfolio.Url || "Not specified",
+          Image: portfolio.Image || "Not specified",
+          Description: portfolio.Description || "Not specified",
+          // Keep any other fields as they are
+          ...Object.keys(portfolio).reduce((acc, key) => {
+            if (!["Title", "Url", "Image", "Description"].includes(key)) {
+              acc[key] = portfolio[key];
+            }
+            return acc;
+          }, {} as any),
+        },
+      })
+    );
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message:
+          portfolioData.length > 0
+            ? "Portfolio details retrieved successfully."
+            : "No portfolio details found.",
+        data: {
+          portfolio: formattedPortfolio,
+          totalRecords: formattedPortfolio.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to add new portfolio entry
+export const addUserPortfolioHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { portfolioData } = req.body;
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!portfolioData) {
+      throw new ErrorHandler({
+        message: "Portfolio data is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current portfolio data
+    const [resume] = await db
+      .select({ portfolio: tblResume.portfolio })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentPortfolio = [];
+
+    if (resume && resume.portfolio) {
+      try {
+        currentPortfolio = JSON.parse(resume.portfolio);
+      } catch (error) {
+        currentPortfolio = [];
+      }
+    }
+
+    // Add new portfolio entry
+    const newPortfolio = {
+      ...portfolioData,
+    };
+
+    currentPortfolio.push(newPortfolio);
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      portfolio: JSON.stringify(currentPortfolio),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Portfolio entry added successfully.",
+        data: {
+          newPortfolio,
+          portfolioIndex: currentPortfolio.length - 1,
+          totalPortfolioCount: currentPortfolio.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to delete user portfolio entry
+export const deleteUserPortfolioHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { portfolioData } = req.body; // Send the complete portfolio object to delete
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!portfolioData) {
+      throw new ErrorHandler({
+        message: "Portfolio data is required to identify the entry to delete.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current portfolio data
+    const [resume] = await db
+      .select({ portfolio: tblResume.portfolio })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentPortfolio = [];
+
+    if (resume && resume.portfolio) {
+      try {
+        currentPortfolio = JSON.parse(resume.portfolio);
+      } catch (error) {
+        throw new ErrorHandler({
+          message: "Error parsing existing portfolio data.",
+          status: STATUS_CODES.SERVER_ERROR,
+        });
+      }
+    }
+
+    if (currentPortfolio.length === 0) {
+      throw new ErrorHandler({
+        message: "No portfolio entries found to delete.",
+        status: STATUS_CODES.NOT_FOUND,
+      });
+    }
+
+    // Find and remove the portfolio entry based on multiple criteria
+    const initialLength = currentPortfolio.length;
+
+    // Method 1: Find by exact match of key fields
+    currentPortfolio = currentPortfolio.filter((portfolio: any) => {
+      const matches =
+        portfolio.Title === portfolioData.Title &&
+        portfolio.Url === portfolioData.Url &&
+        portfolio.Image === portfolioData.Image &&
+        portfolio.Description === portfolioData.Description;
+
+      return !matches; // Keep entries that don't match
+    });
+
+    // If no exact match found, try partial matching with Title and Url
+    if (currentPortfolio.length === initialLength) {
+      currentPortfolio = currentPortfolio.filter((portfolio: any) => {
+        const partialMatch =
+          portfolio.Title === portfolioData.Title &&
+          portfolio.Url === portfolioData.Url;
+
+        return !partialMatch; // Keep entries that don't match
+      });
+    }
+
+    // If still no match, try matching with Title and Image (fallback)
+    if (currentPortfolio.length === initialLength) {
+      currentPortfolio = currentPortfolio.filter((portfolio: any) => {
+        const fallbackMatch =
+          portfolio.Title === portfolioData.Title &&
+          portfolio.Image === portfolioData.Image;
+
+        return !fallbackMatch; // Keep entries that don't match
+      });
+    }
+
+    // Check if any entry was actually deleted
+    if (currentPortfolio.length === initialLength) {
+      throw new ErrorHandler({
+        message:
+          "Portfolio entry not found or could not be identified for deletion. Please ensure the portfolio data matches exactly.",
+        status: STATUS_CODES.NOT_FOUND,
+        data: {
+          searchedFor: portfolioData,
+          availablePortfolio: currentPortfolio.map((portfolio: any) => ({
+            Title: portfolio.Title,
+            Url: portfolio.Url,
+            Image: portfolio.Image,
+            Description: portfolio.Description,
+          })),
+        },
+      });
+    }
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      portfolio: JSON.stringify(currentPortfolio),
+    });
+
+    const deletedCount = initialLength - currentPortfolio.length;
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: `Portfolio entry deleted successfully. ${deletedCount} entry(ies) removed.`,
+        data: {
+          deletedCount,
+          remainingPortfolioCount: currentPortfolio.length,
+          deletedPortfolioData: portfolioData,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler for Step 5: Honors or Awards
+export const updateUserAwardsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id; // Assuming userId is passed as a URL parameter
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { awards } = req.body;
+
+    if (!userId || !awards || !Array.isArray(awards)) {
+      throw new ErrorHandler({
+        message: "User ID and awards array are required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+    const parsedUserId = parseInt(userId.toString());
+
+    await upsertResumeData(parsedUserId, { award: JSON.stringify(awards) }); // Note: schema column is 'award'
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Awards updated successfully.",
+        data: {
+          awards: awards,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler for Step 6: Skills
+export const updateUserSkillsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id; // Assuming userId is passed as a URL parameter
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { skills } = req.body;
+
+    if (!userId || !skills) {
+      throw new ErrorHandler({
+        message: "User ID and skills object are required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+    const parsedUserId = parseInt(userId.toString());
+
+    // Convert arrays to comma-separated strings for skills that come from API
+    // Keep manual fields as simple text
+    const skillsData = {
+      skills: Array.isArray(skills.jobSkills)
+        ? skills.jobSkills.join(",")
+        : skills.jobSkills,
+      language: Array.isArray(skills.language)
+        ? skills.language.join(",")
+        : skills.language, // Manual input
+      location: Array.isArray(skills.preferredJobLocation)
+        ? skills.preferredJobLocation.join(",")
+        : skills.preferredJobLocation,
+      hobbies: Array.isArray(skills.hobbies)
+        ? skills.hobbies.join(",")
+        : skills.hobbies, // Manual input
+      noticePeriod: skills.noticePeriod, // Manual input
+    };
+
+    await upsertResumeData(parsedUserId, skillsData);
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Skills updated successfully.",
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserAwardsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get user's resume data
+    const [resume] = await db
+      .select({ award: tblResume.award })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let awardsData = [];
+
+    if (resume && resume.award) {
+      try {
+        awardsData = JSON.parse(resume.award);
+      } catch (error) {
+        console.error("Error parsing awards JSON:", error);
+        awardsData = [];
+      }
+    }
+
+    // Format the awards data for response - keeping only existing fields
+    const formattedAwards = awardsData.map((award: any, index: number) => ({
+      id: index, // Using index as ID for frontend reference
+      originalData: {
+        Award: award.Award || "Not specified",
+        Award_image: award.Award_image || "Not specified",
+        Date: award.Date || "Not specified",
+        Award_Description: award.Award_Description || "Not specified",
+        // Keep any other fields as they are
+        ...Object.keys(award).reduce((acc, key) => {
+          if (
+            !["Award", "Award_image", "Date", "Award_Description"].includes(key)
+          ) {
+            acc[key] = award[key];
+          }
+          return acc;
+        }, {} as any),
+      },
+    }));
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message:
+          awardsData.length > 0
+            ? "Awards details retrieved successfully."
+            : "No awards details found.",
+        data: {
+          awards: formattedAwards,
+          totalRecords: formattedAwards.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to add new award entry
+export const addUserAwardHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { awardData } = req.body;
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!awardData) {
+      throw new ErrorHandler({
+        message: "Award data is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current awards data
+    const [resume] = await db
+      .select({ award: tblResume.award })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentAwards = [];
+
+    if (resume && resume.award) {
+      try {
+        currentAwards = JSON.parse(resume.award);
+      } catch (error) {
+        currentAwards = [];
+      }
+    }
+
+    // Add new award entry
+    const newAward = {
+      ...awardData,
+    };
+
+    currentAwards.push(newAward);
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      award: JSON.stringify(currentAwards),
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Award entry added successfully.",
+        data: {
+          newAward,
+          awardIndex: currentAwards.length - 1,
+          totalAwardCount: currentAwards.length,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Handler to delete user award entry
+export const deleteUserAwardHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.user?.id;
+    const userId = typeof id === "string" ? parseInt(id) : (id as number);
+    const { awardData } = req.body; // Send the complete award object to delete
+
+    if (!userId) {
+      throw new ErrorHandler({
+        message: "User ID is required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (!awardData) {
+      throw new ErrorHandler({
+        message: "Award data is required to identify the entry to delete.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const parsedUserId = parseInt(userId.toString());
+
+    // Get current awards data
+    const [resume] = await db
+      .select({ award: tblResume.award })
+      .from(tblResume)
+      .where(eq(tblResume.candId, parsedUserId.toString()));
+
+    let currentAwards = [];
+
+    if (resume && resume.award) {
+      try {
+        currentAwards = JSON.parse(resume.award);
+      } catch (error) {
+        throw new ErrorHandler({
+          message: "Error parsing existing awards data.",
+          status: STATUS_CODES.SERVER_ERROR,
+        });
+      }
+    }
+
+    if (currentAwards.length === 0) {
+      throw new ErrorHandler({
+        message: "No award entries found to delete.",
+        status: STATUS_CODES.NOT_FOUND,
+      });
+    }
+
+    // Find and remove the award entry based on multiple criteria
+    const initialLength = currentAwards.length;
+
+    // Method 1: Find by exact match of key fields
+    currentAwards = currentAwards.filter((award: any) => {
+      const matches =
+        award.Award === awardData.Award &&
+        award.Date === awardData.Date &&
+        award.Award_image === awardData.Award_image &&
+        award.Award_Description === awardData.Award_Description;
+
+      return !matches; // Keep entries that don't match
+    });
+
+    // If no exact match found, try partial matching with Award and Date
+    if (currentAwards.length === initialLength) {
+      currentAwards = currentAwards.filter((award: any) => {
+        const partialMatch =
+          award.Award === awardData.Award && award.Date === awardData.Date;
+
+        return !partialMatch; // Keep entries that don't match
+      });
+    }
+
+    // If still no match, try matching with Award and Award_image (fallback)
+    if (currentAwards.length === initialLength) {
+      currentAwards = currentAwards.filter((award: any) => {
+        const fallbackMatch =
+          award.Award === awardData.Award &&
+          award.Award_image === awardData.Award_image;
+
+        return !fallbackMatch; // Keep entries that don't match
+      });
+    }
+
+    // Check if any entry was actually deleted
+    if (currentAwards.length === initialLength) {
+      throw new ErrorHandler({
+        message:
+          "Award entry not found or could not be identified for deletion. Please ensure the award data matches exactly.",
+        status: STATUS_CODES.NOT_FOUND,
+        data: {
+          searchedFor: awardData,
+          availableAwards: currentAwards.map((award: any) => ({
+            Award: award.Award,
+            Date: award.Date,
+            Award_image: award.Award_image,
+            Award_Description: award.Award_Description,
+          })),
+        },
+      });
+    }
+
+    // Update in database
+    await upsertResumeData(parsedUserId, {
+      award: JSON.stringify(currentAwards),
+    });
+
+    const deletedCount = initialLength - currentAwards.length;
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: `Award entry deleted successfully. ${deletedCount} entry(ies) removed.`,
+        data: {
+          deletedCount,
+          remainingAwardCount: currentAwards.length,
+          deletedAwardData: awardData,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// A helper function to reduce repetition
+const upsertResumeData = async (userId: number, data: Record<string, any>) => {
+  const [existingResume] = await db
+    .select({ candId: tblResume.candId })
+    .from(tblResume)
+    .where(eq(tblResume.candId, userId.toString()));
+
+  if (existingResume) {
+    await db
+      .update(tblResume)
+      .set(data)
+      .where(eq(tblResume.candId, userId.toString()));
+  } else {
+    await db.insert(tblResume).values({
+      id: Math.floor(Math.random() * 1000000),
+      candId: userId.toString(),
+      ...data,
+    });
   }
 };
