@@ -87,7 +87,7 @@ export const getOtpForUserHandler = async (
       // Generate a unique ID since auto-increment is not used
       const newUserId = Math.floor(Math.random() * 1000000);
 
-      const [insertResult] = await tx.insert(tblUsers).values({
+      await tx.insert(tblUsers).values({
         id: newUserId, // Explicitly provide ID
         username: "User_" + Math.floor(Math.random() * 10000),
         email: "dummy@email.com",
@@ -108,16 +108,16 @@ export const getOtpForUserHandler = async (
       await tx.update(tblUsers).set({ otp }).where(eq(tblUsers.phone, phone));
     }
 
-    const smsSent = await smsService.sendOTP(phone, otp);
+    // const smsSent = await smsService.sendOTP(phone, otp);
 
-    if (!smsSent) {
-      throw new ErrorHandler({
-        message: "Failed to send OTP",
-        error: "SMS service unavailable",
-        status: STATUS_CODES.SERVER_ERROR,
-        data: { phone },
-      });
-    }
+    // if (!smsSent) {
+    //   throw new ErrorHandler({
+    //     message: "Failed to send OTP",
+    //     error: "SMS service unavailable",
+    //     status: STATUS_CODES.SERVER_ERROR,
+    //     data: { phone },
+    //   });
+    // }
 
     return {
       otp,
@@ -1844,7 +1844,7 @@ export const Apply_JobHandler = async (
       .orderBy(tblJobApply.id)
       .limit(1);
 
-    const nextId = lastApplication.length > 0 ? lastApplication[0].id + 1 : 1;
+    const nextId = userData.id + Math.random() * 100;
 
     const applicationData = {
       id: nextId,
