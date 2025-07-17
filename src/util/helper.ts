@@ -152,10 +152,6 @@ export const getJobTypeLabel = async (
   locationType: string | null,
   salaryType: number | null
 ) => {
-  console.log(
-    `Job Type is ===> ${jobType}, Location Type is ===> ${locationType}, Salary Type is ===> ${salaryType}`
-  );
-
   if (!jobType || !locationType || !salaryType) {
     return {
       jobType: "Not Specified",
@@ -193,10 +189,6 @@ export const getJobTypeLabel = async (
           .from(attribute)
           .where(eq(attribute.id, salaryType)),
       ]);
-
-    console.log("Job Type Result:", jobTypeResult);
-    console.log("Location Type Result:", locationTypeResult);
-    console.log("Salary Type Result:", salaryTypeResult);
 
     return {
       jobType: jobTypeResult[0]?.name || "Not Specified",

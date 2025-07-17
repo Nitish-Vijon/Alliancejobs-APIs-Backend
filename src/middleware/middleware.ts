@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { ErrorHandler } from "../util/errorHandler";
 import { STATUS_CODES } from "../constants/statusCodes";
 import { config } from "../lib/config";
+
 // Extend Request interface to include user data
 declare global {
   namespace Express {
@@ -32,25 +33,38 @@ export const authenticateUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new ErrorHandler({
-        message: "Access denied",
-        error: "No token provided or invalid token format",
-        status: STATUS_CODES.UNAUTHORIZED,
-        data: null,
-      });
+    // Try to get token from Authorization header (with or without Bearer)
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      if (authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      } else {
+        // Token sent directly in Authorization header without Bearer prefix
+        token = authHeader;
+      }
     }
 
-    // Extract token
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // If no token found in Authorization header, try custom headers
+    if (!token) {
+      // Try common custom header names
+      token =
+        (req.headers["x-auth-token"] as string) ||
+        (req.headers["x-access-token"] as string) ||
+        (req.headers["token"] as string);
+    }
+
+    // If still no token, check query parameters as fallback
+    if (!token) {
+      token = req.query.token as string;
+    }
 
     if (!token) {
       throw new ErrorHandler({
         message: "Access denied",
-        error: "Token is required",
+        error:
+          "No token provided. Please provide token in Authorization header, custom header (x-auth-token, x-access-token, token), or query parameter",
         status: STATUS_CODES.UNAUTHORIZED,
         data: null,
       });

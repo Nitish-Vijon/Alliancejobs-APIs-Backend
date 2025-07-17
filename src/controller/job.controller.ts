@@ -46,7 +46,6 @@ export const getRecentJobsHandler = async (
       eq(tblJobPost.status, 1), // Only active jobs
     ];
 
-    console.log("CAlled");
     // if (location) {
     //   baseConditions.push(eq(tblJobPost.city, parseInt(location as string)));
     // }

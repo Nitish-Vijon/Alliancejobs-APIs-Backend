@@ -57,11 +57,8 @@ export const getOtpForUserHandler = async (
 ): Promise<void> => {
   const { phone } = req.body;
 
-  console.log("Phone Number:", phone);
-
   // Validate phone number format using Zod
   const result = phoneSchema.safeParse(phone);
-  console.log("Validation Result:", result);
   if (!result.success) {
     throw new ErrorHandler({
       message: "Validation failed",
@@ -112,8 +109,6 @@ export const getOtpForUserHandler = async (
     }
 
     const smsSent = await smsService.sendOTP(phone, otp);
-
-    console.log("SMS sent:==>", smsSent);
 
     if (!smsSent) {
       throw new ErrorHandler({
@@ -597,7 +592,7 @@ export const getUserSavedJobsHandler = async (
       tblUsers,
       and(
         eq(tblJobPost.eId, tblUsers.id),
-        eq(tblUsers.type, "2") // Only join users with type = 2
+        eq(tblUsers.type, "1") // Only join users with type = 2
       )
     )
     .where(
@@ -614,7 +609,7 @@ export const getUserSavedJobsHandler = async (
     .innerJoin(tblJobPost, eq(tblWishlist.jobId, tblJobPost.id))
     .leftJoin(
       tblUsers,
-      and(eq(tblJobPost.eId, tblUsers.id), eq(tblUsers.type, "2"))
+      and(eq(tblJobPost.eId, tblUsers.id), eq(tblUsers.type, ""))
     )
     .where(
       and(eq(tblWishlist.loginId, userIdNumber), eq(tblJobPost.status, 1))
@@ -735,10 +730,7 @@ export const getUserAppliedJobsHandler = async (
   next: NextFunction
 ): Promise<void> => {
   const { page = "1", limit = "10", status } = req.query;
-  const id = req.user?.id; // Assuming userId is passed as a URL parameter
-  const userId = typeof id === "string" ? parseInt(id) : (id as number);
-  // Alternative: Get userId from authenticated user
-  // const userId = req.user?.id; // If using authentication middleware
+  const userId = req.user?.id;
 
   if (!userId) {
     res.status(STATUS_CODES.BAD_REQUEST).json(
@@ -747,6 +739,7 @@ export const getUserAppliedJobsHandler = async (
         data: null,
       }).toJSON()
     );
+    return; // Add return to prevent further execution
   }
 
   const pageNum = parseInt(page as string);
@@ -766,201 +759,215 @@ export const getUserAppliedJobsHandler = async (
     );
   }
 
-  // Build the main query to get applied jobs
-  const appliedJobsQuery = db
-    .select({
-      // Job details
-      jobId: tblJobPost.id,
-      jobTitle: tblJobPost.jobTitle,
-      eId: tblJobPost.eId,
-      jobType: tblJobPost.jobType,
-      locationType: tblJobPost.locationType,
-      salaryType: tblJobPost.salaryType,
-      minSalary: tblJobPost.minSalary,
-      maxSalary: tblJobPost.maxSalary,
-      expMin: tblJobPost.expMin,
-      expMax: tblJobPost.expMax,
-      postDate: tblJobPost.postDate,
-      feature: tblJobPost.feature,
-      // Location data
-      cityName: cities.name,
-      // Company data (employer with type = 2)
-      companyName: tblUsers.username,
-      companyProfilePic: tblUsers.profilePic,
-      // Application data
-      applicationId: tblJobApply.id,
-      applicationDate: tblJobApply.date,
-      applyStatus: tblJobApply.applyStatus,
-      jobRole: tblJobApply.jobRole,
-      applicationLocation: tblJobApply.location,
-    })
-    .from(tblJobApply)
-    .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
-    .leftJoin(cities, eq(tblJobPost.city, cities.id))
-    .leftJoin(
-      tblUsers,
-      and(
-        eq(tblJobPost.eId, tblUsers.id),
-        eq(tblUsers.type, "2") // Only join users with type = 2
-      )
-    )
-    .where(and(...baseConditions));
-
-  // Get total count for pagination
-  const totalCountQuery = db
-    .select({ count: sql`COUNT(*)` })
-    .from(tblJobApply)
-    .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
-    .leftJoin(
-      tblUsers,
-      and(eq(tblJobPost.eId, tblUsers.id), eq(tblUsers.type, "2"))
-    )
-    .where(and(...baseConditions));
-
-  const [totalResult] = await totalCountQuery;
-  const totalAppliedJobs = parseInt((totalResult.count as number).toString());
-
-  // Execute the main query with pagination
-  const appliedJobs = await appliedJobsQuery
-    .orderBy(desc(tblJobApply.id)) // Most recently applied first
-    .limit(limitNum)
-    .offset(offset);
-
-  // Get application counts for each job
-  const jobIds = appliedJobs.map((job) => job.jobId);
-  let applicationCounts: Array<{ jobId: number; count: unknown }> = [];
-
-  if (jobIds.length > 0) {
-    applicationCounts = await db
+  try {
+    // Build the main query to get applied jobs
+    const appliedJobsQuery = db
       .select({
-        jobId: tblJobApply.jobId,
-        count: sql`COUNT(*)`.as("applicationCount"),
+        // Job details
+        jobId: tblJobPost.id,
+        jobTitle: tblJobPost.jobTitle,
+        eId: tblJobPost.eId,
+        jobType: tblJobPost.jobType,
+        locationType: tblJobPost.locationType,
+        salaryType: tblJobPost.salaryType,
+        minSalary: tblJobPost.minSalary,
+        maxSalary: tblJobPost.maxSalary,
+        expMin: tblJobPost.expMin,
+        expMax: tblJobPost.expMax,
+        postDate: tblJobPost.postDate,
+        feature: tblJobPost.feature,
+        // Location data
+        cityName: cities.name,
+        // Company data (employer with type = 1) - Fixed the type check
+        companyName: tblUsers.username,
+        companyProfilePic: tblUsers.profilePic,
+        // Application data
+        applicationId: tblJobApply.id,
+        applicationDate: tblJobApply.date,
+        applyStatus: tblJobApply.applyStatus,
+        jobRole: tblJobApply.jobRole,
+        applicationLocation: tblJobApply.location,
       })
       .from(tblJobApply)
-      .where(sql`${tblJobApply.jobId} IN (${jobIds.join(",")})`)
-      .groupBy(tblJobApply.jobId);
-  }
+      .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
+      .leftJoin(cities, eq(tblJobPost.city, cities.id))
+      .leftJoin(
+        tblUsers,
+        and(
+          eq(tblJobPost.eId, tblUsers.id),
+          eq(tblUsers.type, "1") // This should match your database - type is '1' as string
+        )
+      )
+      .where(and(...baseConditions));
 
-  const applicationCountMap = applicationCounts.reduce((acc, item) => {
-    acc[item.jobId] = parseInt((item.count as number).toString());
-    return acc;
-  }, {} as Record<number, number>);
+    // Get total count for pagination
+    const totalCountQuery = db
+      .select({ count: sql`COUNT(*)` })
+      .from(tblJobApply)
+      .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
+      .leftJoin(
+        tblUsers,
+        and(
+          eq(tblJobPost.eId, tblUsers.id),
+          eq(tblUsers.type, "1") // Fixed: should be string "1"
+        )
+      )
+      .where(and(...baseConditions));
 
-  // Check if user has saved any of these jobs
-  let userSavedJobs: Array<{ jobId: number }> = [];
-  if (jobIds.length > 0) {
-    userSavedJobs = await db
-      .select({
-        jobId: tblWishlist.jobId,
+    const [totalResult] = await totalCountQuery;
+    const totalAppliedJobs = parseInt((totalResult.count as number).toString());
+
+    // Execute the main query with pagination
+    const appliedJobs = await appliedJobsQuery
+      .orderBy(desc(tblJobApply.id)) // Most recently applied first
+      .limit(limitNum)
+      .offset(offset);
+
+    // Get application counts for each job
+    const jobIds = appliedJobs.map((job) => job.jobId);
+    let applicationCounts: Array<{ jobId: number; count: unknown }> = [];
+
+    if (jobIds.length > 0) {
+      applicationCounts = await db
+        .select({
+          jobId: tblJobApply.jobId,
+          count: sql`COUNT(*)`.as("applicationCount"),
+        })
+        .from(tblJobApply)
+        .where(sql`${tblJobApply.jobId} IN (${jobIds.join(",")})`)
+        .groupBy(tblJobApply.jobId);
+    }
+
+    const applicationCountMap = applicationCounts.reduce((acc, item) => {
+      acc[item.jobId] = parseInt((item.count as number).toString());
+      return acc;
+    }, {} as Record<number, number>);
+
+    // Check if user has saved any of these jobs
+    let userSavedJobs: Array<{ jobId: number }> = [];
+    if (jobIds.length > 0) {
+      userSavedJobs = await db
+        .select({
+          jobId: tblWishlist.jobId,
+        })
+        .from(tblWishlist)
+        .where(
+          and(
+            eq(tblWishlist.loginId, parseInt(userId.toString())),
+            sql`${tblWishlist.jobId} IN (${jobIds.join(",")})`
+          )
+        );
+    }
+
+    const userSavedJobIds = new Set(userSavedJobs.map((saved) => saved.jobId));
+
+    // Format the response
+    const formattedAppliedJobs = await Promise.all(
+      appliedJobs.map(async (job) => {
+        const {
+          jobType: jobTypeLabel,
+          locationType: locationTypeLabel,
+          salaryType,
+        } = await getJobTypeLabel(
+          job.jobType,
+          job.locationType,
+          job.salaryType
+        );
+        const applicationCount = applicationCountMap[job.jobId] || 0;
+        const isSaved = userSavedJobIds.has(job.jobId);
+
+        return {
+          jobId: job.jobId,
+          jobTitle: job.jobTitle,
+          company: {
+            name: job.companyName,
+            profilePic: job.companyProfilePic,
+          },
+          location: job.cityName,
+          experience: `${job.expMin}-${job.expMax} Yrs`,
+          jobType: jobTypeLabel,
+          locationType: locationTypeLabel,
+          salaryType,
+          salary: formatSalaryRange(job.minSalary || 0, job.maxSalary || 0),
+          applications: `${applicationCount}+ Application${
+            applicationCount !== 1 ? "s" : ""
+          }`,
+          postedTime: getTimeAgo(job.postDate || null, job.jobId),
+          eId: job.eId,
+          isSaved: isSaved,
+          hasApplied: true, // Always true for applied jobs
+          // Application specific data
+          application: {
+            id: job.applicationId,
+            appliedDate: job.applicationDate,
+            statusLabel: getApplicationStatusLabel(job.applyStatus || 0),
+            statusColor: getStatusColor(job.applyStatus || 0),
+            jobRole: job.jobRole,
+            applicationLocation: job.applicationLocation,
+          },
+        };
       })
-      .from(tblWishlist)
+    );
+
+    // Get status summary
+    const statusSummary = await db
+      .select({
+        status: tblJobApply.applyStatus,
+        count: sql`COUNT(*)`.as("count"),
+      })
+      .from(tblJobApply)
+      .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
       .where(
         and(
-          eq(tblWishlist.loginId, parseInt(userId.toString())),
-          sql`${tblWishlist.jobId} IN (${jobIds.join(",")})`
+          eq(tblJobApply.candId, parseInt(userId.toString())),
+          eq(tblJobPost.status, 1)
         )
-      );
-  }
-
-  const userSavedJobIds = new Set(userSavedJobs.map((saved) => saved.jobId));
-
-  // Helper function to get application status label
-
-  // Format the response
-  const formattedAppliedJobs = await Promise.all(
-    appliedJobs.map(async (job) => {
-      const {
-        jobType: jobTypeLabel,
-        locationType: locationTypeLabel,
-        salaryType,
-      } = await getJobTypeLabel(job.jobType, job.locationType, job.salaryType);
-      const applicationCount = applicationCountMap[job.jobId] || 0;
-      const isSaved = userSavedJobIds.has(job.jobId);
-
-      return {
-        jobId: job.jobId,
-        jobTitle: job.jobTitle,
-        company: {
-          name: job.companyName,
-          profilePic: job.companyProfilePic,
-        },
-        location: job.cityName,
-        experience: `${job.expMin}-${job.expMax} Yrs`,
-        jobType: jobTypeLabel,
-        locationType: locationTypeLabel,
-        salaryType,
-        salary: formatSalaryRange(job.minSalary || 0, job.maxSalary || 0),
-        applications: `${applicationCount}+ Application${
-          applicationCount !== 1 ? "s" : ""
-        }`,
-        postedTime: getTimeAgo(job.postDate || null, job.jobId),
-        eId: job.eId,
-        isSaved: isSaved,
-        hasApplied: true, // Always true for applied jobs
-        // Application specific data
-        application: {
-          id: job.applicationId,
-          appliedDate: job.applicationDate,
-          statusLabel: getApplicationStatusLabel(job.applyStatus || 0),
-          statusColor: getStatusColor(job.applyStatus || 0),
-          jobRole: job.jobRole,
-          applicationLocation: job.applicationLocation,
-        },
-      };
-    })
-  );
-
-  // Get status summary
-  const statusSummary = await db
-    .select({
-      status: tblJobApply.applyStatus,
-      count: sql`COUNT(*)`.as("count"),
-    })
-    .from(tblJobApply)
-    .innerJoin(tblJobPost, eq(tblJobApply.jobId, tblJobPost.id))
-    .where(
-      and(
-        eq(tblJobApply.candId, parseInt(userId.toString())),
-        eq(tblJobPost.status, 1)
       )
-    )
-    .groupBy(tblJobApply.applyStatus);
+      .groupBy(tblJobApply.applyStatus);
 
-  const statusSummaryFormatted = statusSummary.map((item) => ({
-    status: item.status,
-    statusLabel: getApplicationStatusLabel(item.status || 0),
-    count: parseInt((item.count as number).toString()),
-  }));
+    const statusSummaryFormatted = statusSummary.map((item) => ({
+      status: item.status,
+      statusLabel: getApplicationStatusLabel(item.status || 0),
+      count: parseInt((item.count as number).toString()),
+    }));
 
-  // Calculate pagination info
-  const totalPages = Math.ceil(totalAppliedJobs / limitNum);
-  const hasNextPage = pageNum < totalPages;
-  const hasPrevPage = pageNum > 1;
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalAppliedJobs / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
 
-  // Send success response
-  res.status(STATUS_CODES.OK).json(
-    new ResponseHandler({
-      message:
-        totalAppliedJobs > 0
-          ? "Applied jobs retrieved successfully"
-          : "No applied jobs found",
-      data: {
-        appliedJobs: formattedAppliedJobs,
-        statusSummary: statusSummaryFormatted,
-        pagination: {
-          currentPage: pageNum,
-          totalPages,
-          totalJobs: totalAppliedJobs,
-          hasNextPage,
-          hasPrevPage,
-          limit: limitNum,
+    // Send success response
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message:
+          totalAppliedJobs > 0
+            ? "Applied jobs retrieved successfully"
+            : "No applied jobs found",
+        data: {
+          appliedJobs: formattedAppliedJobs,
+          statusSummary: statusSummaryFormatted,
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            totalJobs: totalAppliedJobs,
+            hasNextPage,
+            hasPrevPage,
+            limit: limitNum,
+          },
         },
-      },
-    }).toJSON()
-  );
+      }).toJSON()
+    );
+  } catch (error) {
+    console.error("Error in getUserAppliedJobsHandler:", error);
+    res.status(STATUS_CODES.SERVER_ERROR).json(
+      new ResponseHandler({
+        message: "An error occurred while fetching applied jobs",
+        data: null,
+      }).toJSON()
+    );
+  }
 };
 
-// Handler for Step 1: Basic Information
 export const updateUserBasicInfoHandler = async (
   req: Request,
   res: Response,
@@ -1228,7 +1235,7 @@ export const getUserFavoriteJobsHandler = async (
         tblUsers,
         and(
           eq(tblJobPost.eId, tblUsers.id),
-          eq(tblUsers.type, "2") // Only join users with type = "2" (employers)
+          eq(tblUsers.type, "1") // Only join users with type = "2" (employers)
         )
       )
       .where(
@@ -1245,7 +1252,7 @@ export const getUserFavoriteJobsHandler = async (
       .innerJoin(tblJobPost, eq(tblWishlist.jobId, tblJobPost.id))
       .leftJoin(
         tblUsers,
-        and(eq(tblJobPost.eId, tblUsers.id), eq(tblUsers.type, "2"))
+        and(eq(tblJobPost.eId, tblUsers.id), eq(tblUsers.type, "1"))
       )
       .where(
         and(eq(tblWishlist.loginId, userIdNumber), eq(tblJobPost.status, 1))
@@ -1486,7 +1493,7 @@ export const get_Data_For_Apply_JobHandler = async (
         tblUsers,
         and(
           eq(tblJobPost.eId, tblUsers.id),
-          eq(tblUsers.type, "2") // Employer
+          eq(tblUsers.type, "1") // Employer
         )
       )
       .leftJoin(cities, eq(tblJobPost.city, cities.id))
@@ -1800,6 +1807,7 @@ export const Apply_JobHandler = async (
       res.status(409).json({
         success: false,
         message: "You have already applied to this job",
+        // data: { applicationId: existingApplication[0], userId },
       });
       return;
     }

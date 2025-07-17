@@ -38,8 +38,7 @@ export class CohereOTPService {
         return false;
       }
 
-      const data = await response.json();
-      console.log("SMS sent successfully via Cohere:", data);
+      await response.json();
       return true;
     } catch (error) {
       console.error("Error sending SMS via Cohere:", error);
