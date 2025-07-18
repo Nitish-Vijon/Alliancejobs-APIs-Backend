@@ -22,7 +22,7 @@ import {
 import { ErrorHandler } from "../util/errorHandler";
 import { ResponseHandler } from "../util/responseHandler";
 import { phoneSchema } from "../validations/user.validations";
-import { CohereOTPService } from "../util/sms_Service";
+import { sendOTP } from "../util/sms_Service";
 import { accessTokenGenerator } from "../util/accessTokenGenerator";
 import {
   calculateMatchPercentages,
@@ -56,6 +56,22 @@ export const getOtpForUserHandler = async (
   next: NextFunction
 ): Promise<void> => {
   const { phone } = req.body;
+  let { servertype } = req.query;
+
+  if (!phone) {
+    throw new ErrorHandler({
+      message: "Phone number is required.",
+      status: STATUS_CODES.BAD_REQUEST,
+    });
+  }
+  if (!["PROD", "DEV"].includes(servertype.toString())) {
+    throw new ErrorHandler({
+      message: "Invalid server type.Supported types: PROD, DEV",
+      status: STATUS_CODES.BAD_REQUEST,
+    });
+  } else if (!servertype) {
+    servertype = "PROD";
+  }
 
   // Validate phone number format using Zod
   const result = phoneSchema.safeParse(phone);
@@ -69,10 +85,9 @@ export const getOtpForUserHandler = async (
   }
 
   // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
   // Initialize SMS service (choose one based on your setup)
-  const smsService = new CohereOTPService();
 
   // Use transaction to ensure atomicity
   const updatedUser = await db.transaction(async (tx) => {
@@ -108,16 +123,18 @@ export const getOtpForUserHandler = async (
       await tx.update(tblUsers).set({ otp }).where(eq(tblUsers.phone, phone));
     }
 
-    // const smsSent = await smsService.sendOTP(phone, otp);
+    if (servertype === "PROD") {
+      const smsSent = await sendOTP(phone, otp);
 
-    // if (!smsSent) {
-    //   throw new ErrorHandler({
-    //     message: "Failed to send OTP",
-    //     error: "SMS service unavailable",
-    //     status: STATUS_CODES.SERVER_ERROR,
-    //     data: { phone },
-    //   });
-    // }
+      if (!smsSent) {
+        throw new ErrorHandler({
+          message: "Failed to send OTP",
+          error: "SMS service unavailable",
+          status: STATUS_CODES.SERVER_ERROR,
+          data: { phone },
+        });
+      }
+    }
 
     return {
       otp,
@@ -127,10 +144,10 @@ export const getOtpForUserHandler = async (
   // Send success response
   res.status(STATUS_CODES.OK).json(
     new ResponseHandler({
-      message: "OTP updated successfully",
-      data: {
-        otp: updatedUser.otp,
-      },
+      message:
+        servertype === "DEV"
+          ? updatedUser.otp
+          : "OTP sent successfully to " + phone,
     }).toJSON()
   );
 };

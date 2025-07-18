@@ -2,9 +2,12 @@ import express, { NextFunction, Request, Response } from "express";
 import { IndexRoutes } from "../routes/index.routes.js";
 import { errorMiddleware } from "../middleware/errorMiddleware.js";
 import path from "path";
+import { mustload } from "./config.js";
 const app = express();
 
 app.use(express.json());
+
+mustload();
 
 app.use(express.static("public"));
 const uploadsPath = path.join(__dirname, "..", "..", "uploads");
