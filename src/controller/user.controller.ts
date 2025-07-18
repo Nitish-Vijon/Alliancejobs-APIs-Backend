@@ -13,7 +13,7 @@ import {
   tblWishlist,
   attribute,
 } from "../db/schema";
-import { and, desc, eq, ne, or, SQL, sql } from "drizzle-orm";
+import { and, count, desc, eq, ne, or, SQL, sql } from "drizzle-orm";
 import {
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -48,6 +48,42 @@ interface RelatedJobsQuery {
   limit?: string;
   jobTypeId?: string;
   salaryRange?: string;
+}
+
+interface UserStats {
+  profileCompletion: {
+    percentage: number;
+    completedFields: number;
+    totalFields: number;
+    missingFields: string[];
+  };
+  resumeStatus: {
+    uploaded: boolean;
+    completeness: number;
+    sections: {
+      coverLetter: boolean;
+      skills: boolean;
+      education: boolean;
+      experience: boolean;
+      portfolio: boolean;
+      language: boolean;
+      award: boolean;
+    };
+  };
+  accountInfo: {
+    accountAge: number; // in days
+    lastLogin: string | null;
+    emailVerified: boolean;
+    profileViews: number;
+    accountType: string;
+  };
+  completionTasks: {
+    profilePicture: boolean;
+    phoneNumber: boolean;
+    location: boolean;
+    socialLinks: boolean;
+    aboutDescription: boolean;
+  };
 }
 
 export const getOtpForUserHandler = async (
@@ -3733,4 +3769,171 @@ const upsertResumeData = async (userId: number, data: Record<string, any>) => {
       ...data,
     });
   }
+};
+
+export const userProfileLoaderHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const userId = Number(req.user?.id);
+
+  if (!userId) {
+    return next(new ErrorHandler({ message: "User ID is required." }));
+  }
+
+  // Get user data
+  const userData = await db
+    .select()
+    .from(tblUsers)
+    .where(eq(tblUsers.id, userId))
+    .limit(1);
+
+  if (!userData || userData.length === 0) {
+    return next(new ErrorHandler({ message: "User not found." }));
+  }
+
+  const user = userData[0];
+
+  // Get resume data
+  const resumeData = await db
+    .select()
+    .from(tblResume)
+    .where(eq(tblResume.candId, userId.toString()))
+    .limit(1);
+
+  const resume = resumeData[0] || null;
+
+  // Calculate profile completion
+  const profileFields = [
+    { field: "username", value: user.username },
+    { field: "email", value: user.email },
+    { field: "phone", value: user.phone },
+    { field: "profilePic", value: user.profilePic },
+    { field: "gender", value: user.gender },
+    { field: "dob", value: user.dob },
+    { field: "canDesc", value: user.canDesc },
+    {
+      field: "state",
+      value: user.state && user.state !== 0 ? user.state : null,
+    },
+    { field: "city", value: user.city && user.city !== 0 ? user.city : null },
+    { field: "fullAddress", value: user.fullAddress },
+    { field: "organization", value: user.organization },
+    { field: "sectorId", value: user.sectorId },
+    {
+      field: "industryId",
+      value: user.industryId && user.industryId !== 0 ? user.industryId : null,
+    },
+  ];
+
+  const completedFields = profileFields.filter(
+    (field) =>
+      field.value &&
+      field.value !== "NULL" &&
+      field.value !== null &&
+      field.value !== ""
+  );
+
+  const missingFields = profileFields
+    .filter(
+      (field) =>
+        !field.value ||
+        field.value === "NULL" ||
+        field.value === null ||
+        field.value === ""
+    )
+    .map((field) => field.field);
+
+  const profileCompletionPercentage = Math.round(
+    (completedFields.length / profileFields.length) * 100
+  );
+
+  // Calculate resume completeness
+  const resumeSections = {
+    coverLetter: !!(resume?.coverLetter && resume.coverLetter !== "NULL"),
+    skills: !!(resume?.skills && resume.skills !== "NULL"),
+    education: !!(resume?.education && resume.education !== "NULL"),
+    experience: !!(resume?.experience && resume.experience !== "NULL"),
+    portfolio: !!(resume?.portfolio && resume.portfolio !== "NULL"),
+    language: !!(resume?.language && resume.language !== "NULL"),
+    award: !!(resume?.award && resume.award !== "NULL"),
+  };
+
+  const completedResumeSections =
+    Object.values(resumeSections).filter(Boolean).length;
+  const resumeCompletenessPercentage = Math.round(
+    (completedResumeSections / Object.keys(resumeSections).length) * 100
+  );
+
+  // Calculate account age
+  const createdDate = new Date(user.createdDate);
+  const now = new Date();
+  const accountAge = Math.floor(
+    (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  // Build response
+  const userStats: UserStats = {
+    profileCompletion: {
+      percentage: profileCompletionPercentage,
+      completedFields: completedFields.length,
+      totalFields: profileFields.length,
+      missingFields: missingFields,
+    },
+    resumeStatus: {
+      uploaded: !!(resume?.cv && resume.cv !== "NULL"),
+      completeness: resumeCompletenessPercentage,
+      sections: resumeSections,
+    },
+    accountInfo: {
+      accountAge,
+      lastLogin: null, // You might want to implement last login tracking
+      emailVerified: user.everify === "1",
+      profileViews: parseInt(user.totalView || "0"),
+      accountType: user.type || "candidate",
+    },
+    completionTasks: {
+      profilePicture: !!(user.profilePic && user.profilePic !== "NULL"),
+      phoneNumber: !!(user.phone && user.phone !== "NULL"),
+      location: !!(
+        user.state &&
+        user.state !== 0 &&
+        user.city &&
+        user.city !== 0
+      ),
+      socialLinks: !!(
+        user.facebook ||
+        user.twitter ||
+        user.linkedin ||
+        user.dribbble
+      ),
+      aboutDescription: !!(user.canDesc && user.canDesc !== "NULL"),
+    },
+  };
+
+  // Calculate overall completion percentage
+  const overallTasks = [
+    userStats.profileCompletion.percentage > 80,
+    userStats.resumeStatus.uploaded,
+    userStats.resumeStatus.completeness > 60,
+    userStats.completionTasks.profilePicture,
+    userStats.completionTasks.phoneNumber,
+    userStats.completionTasks.location,
+    userStats.accountInfo.emailVerified,
+  ];
+
+  const overallCompletion = Math.round(
+    (overallTasks.filter(Boolean).length / overallTasks.length) * 100
+  );
+
+  res.status(200).json(
+    new ResponseHandler({
+      message: "User profile fetched successfully",
+      data: {
+        // ...userStats,
+        overallCompletion,
+      },
+    })
+  );
 };

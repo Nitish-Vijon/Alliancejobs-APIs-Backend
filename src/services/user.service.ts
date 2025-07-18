@@ -30,6 +30,7 @@ import {
   getUserAwardsHandler,
   addUserAwardHandler,
   deleteUserAwardHandler,
+  userProfileLoaderHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -176,4 +177,9 @@ export const addUserAward = tryCatch("Add User Award", addUserAwardHandler);
 export const deleteUserAward = tryCatch(
   "Delete User Award",
   deleteUserAwardHandler
+);
+
+export const userProfileLoader = tryCatch(
+  "User Profile Loader",
+  userProfileLoaderHandler
 );

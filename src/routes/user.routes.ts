@@ -31,6 +31,7 @@ import {
   getUserAwards,
   addUserAward,
   deleteUserAward,
+  userProfileLoader,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -89,6 +90,7 @@ routes.patch("/portfolio", authenticateUser, updateUserPortfolio);
 routes.get("/portfolio", authenticateUser, getUserPortfolio);
 routes.post("/portfolio", authenticateUser, addUserPortfolio);
 routes.delete("/portfolio", authenticateUser, deleteUserPortfolio);
+routes.get("/profile-loader", authenticateUser, userProfileLoader);
 
 // Awards Routes
 routes.patch("/awards", authenticateUser, updateUserAwards);
