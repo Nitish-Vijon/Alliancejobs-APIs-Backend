@@ -1046,6 +1046,9 @@ export const updateUserBasicInfoHandler = async (
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message: "Basic info updated successfully.",
+        data: {
+          basicInfo: basicInfo,
+        },
       }).toJSON()
     );
   } catch (error) {
@@ -3431,6 +3434,9 @@ export const updateUserSkillsHandler = async (
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message: "Skills updated successfully.",
+        data: {
+          skills: skillsData,
+        },
       }).toJSON()
     );
   } catch (error) {
