@@ -39,6 +39,7 @@ import fs from "fs";
 import { promisify } from "util";
 import { validateFileType } from "../middleware/multer.middleware";
 import { getImageUrl } from "../util/getimageurl";
+import { generateUniqueId } from "../util/generateTableId";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -224,10 +225,10 @@ export const getOtpForUserHandler = async (
     // If User Not Exists Then Create
     if (!existingUser) {
       // Generate a unique ID since auto-increment is not used
-      const newUserId = Math.floor(Math.random() * 1000000);
+      const nextId = await generateUniqueId(tblUsers);
 
       await tx.insert(tblUsers).values({
-        id: newUserId, // Explicitly provide ID
+        id: nextId, // Explicitly provide ID
         username: "User_" + Math.floor(Math.random() * 10000),
         email: "dummy@email.com",
         psw: "dummyPassword",
@@ -1982,13 +1983,9 @@ export const Apply_JobHandler = async (
     // Create the job application
     const currentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-    const lastApplication = await db
-      .select({ id: tblJobApply.id })
-      .from(tblJobApply)
-      .orderBy(tblJobApply.id)
-      .limit(1);
+    // const nextId = userData.id + Math.random() * 100;
 
-    const nextId = userData.id + Math.random() * 100;
+    const nextId = await generateUniqueId(tblJobApply);
 
     const applicationData = {
       id: nextId,
@@ -2165,8 +2162,9 @@ export const uploadResumeHandler = async (
       });
     } else {
       // Create new resume record
+      const nextId = await generateUniqueId(tblResume);
       const resumeData = {
-        id: userId + Math.floor(Math.random() * 10),
+        id: nextId,
         candId: userId.toString(),
         cv: fileName,
         coverLetter: null,

@@ -5,6 +5,7 @@ import { and, eq, like } from "drizzle-orm";
 import { ErrorHandler } from "../util/errorHandler";
 import { STATUS_CODES } from "../constants/statusCodes";
 import { ResponseHandler } from "../util/responseHandler";
+import { generateUniqueId } from "../util/generateTableId";
 
 export const getAttributeOptionsHandler = async (
   req: Request,
@@ -481,9 +482,9 @@ export const addCustomAttributeHandler = async (
     }
 
     // Add new attribute
-    const newId = Math.floor(Math.random() * 1000000);
+    const nextId = await generateUniqueId(attribute);
     await db.insert(attribute).values({
-      id: newId,
+      id: nextId,
       name: name.trim(),
       parentId: parentId,
       icon: null,
@@ -496,7 +497,7 @@ export const addCustomAttributeHandler = async (
         icon: attribute.icon,
       })
       .from(attribute)
-      .where(eq(attribute.id, newId));
+      .where(eq(attribute.id, nextId));
 
     res.status(STATUS_CODES.CREATED).json(
       new ResponseHandler({
