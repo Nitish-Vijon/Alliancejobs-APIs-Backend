@@ -13,7 +13,7 @@ import {
   tblWishlist,
   attribute,
 } from "../db/schema";
-import { and, count, desc, eq, ne, or, SQL, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, or, SQL, sql } from "drizzle-orm";
 import {
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -84,6 +84,94 @@ interface UserStats {
     socialLinks: boolean;
     aboutDescription: boolean;
   };
+}
+
+interface AttributeData {
+  id: number;
+  name: string | null;
+  parentId: string | null;
+  icon: string | null;
+}
+
+// Education entry interface
+interface EducationEntry {
+  Education?: string;
+  EducationInfo?: AttributeData | null;
+  Stream?: string;
+  StreamInfo?: AttributeData | null;
+  Start_Date?: string;
+  End_Date?: string;
+  Institute?: string;
+  [key: string]: any; // For any additional fields
+}
+
+interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  phone?: string;
+  phone2?: string;
+  profilePic?: string;
+  coverImage?: string;
+  website?: string;
+  foundedDate?: string;
+  organization?: string;
+  canDesc?: string;
+  gender?: string;
+  genderInfo?: AttributeData | null; // Add gender attribute data
+  dob?: string;
+  age?: number;
+  socialMedia: {
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    dribbble?: string;
+  };
+  location: {
+    state: number;
+    city: number;
+    pincode: number;
+    fullAddress?: string;
+    stateInfo?: any;
+    cityInfo?: any;
+    countryInfo?: any;
+  };
+  settings: {
+    publicView: number;
+    everify: string;
+    status: string;
+    totalView: string;
+  };
+  utm: {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
+  };
+  sectorInfo?: any;
+  createdDate: string;
+}
+
+interface ResumeData {
+  id?: number;
+  coverLetter?: string;
+  skills?: string;
+  skillsInfo?: AttributeData[]; // Add skills attribute data array
+  location?: string;
+  locationInfo?: AttributeData[]; // Add location attribute data array
+  hobbies?: string;
+  cv?: string;
+  education?: EducationEntry[] | string; // Can be parsed array or original string
+  experience?: any[] | string; // Can be parsed array or original string
+  portfolio?: any[] | string; // Can be parsed array or original string
+  language?: any[] | string; // Can be parsed array or original string
+  noticePeriod?: string;
+  award?: string;
+}
+
+interface CompleteUserData {
+  profile: UserProfile;
+  resume: ResumeData | null;
 }
 
 export const getOtpForUserHandler = async (
@@ -3936,4 +4024,294 @@ export const userProfileLoaderHandler = async (
       },
     })
   );
+};
+
+export const getCurrentUserHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = Number(req.user.id);
+
+    if (!userId || isNaN(userId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+      return;
+    }
+
+    // Get user profile data
+    const userProfile = await db
+      .select()
+      .from(tblUsers)
+      .where(eq(tblUsers.id, userId))
+      .limit(1);
+
+    if (!userProfile.length) {
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const user = userProfile[0];
+
+    // Get user resume data
+    const userResume = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    // Helper function to get attribute data by IDs
+    const getAttributesByIds = async (
+      ids: string[] | number[]
+    ): Promise<any[]> => {
+      if (!ids || ids.length === 0) return [];
+
+      const numericIds = ids
+        .map((id) => (typeof id === "string" ? parseInt(id) : id))
+        .filter((id) => !isNaN(id));
+      if (numericIds.length === 0) return [];
+
+      const attributes = await db
+        .select()
+        .from(attribute)
+        .where(inArray(attribute.id, numericIds));
+
+      return attributes;
+    };
+
+    // Get location information
+    let stateInfo = null;
+    let cityInfo = null;
+    let countryInfo = null;
+
+    if (user.state && user.state > 0) {
+      const stateData = await db
+        .select()
+        .from(states)
+        .where(eq(states.id, user.state))
+        .limit(1);
+
+      if (stateData.length) {
+        stateInfo = stateData[0];
+
+        // Get country info from state
+        if (stateInfo.countryId) {
+          const countryData = await db
+            .select()
+            .from(countries)
+            .where(eq(countries.id, stateInfo.countryId))
+            .limit(1);
+
+          if (countryData.length) {
+            countryInfo = countryData[0];
+          }
+        }
+      }
+    }
+
+    if (user.city && user.city > 0) {
+      const cityData = await db
+        .select()
+        .from(cities)
+        .where(eq(cities.id, user.city))
+        .limit(1);
+
+      if (cityData.length) {
+        cityInfo = cityData[0];
+      }
+    }
+
+    // Get sector information
+    let sectorInfo = null;
+    if (user.sectorId) {
+      const sectorData = await db
+        .select()
+        .from(tblCatSector)
+        .where(eq(tblCatSector.id, parseInt(user.sectorId)))
+        .limit(1);
+
+      if (sectorData.length) {
+        sectorInfo = sectorData[0];
+      }
+    }
+
+    // Get gender information from attribute table
+    let genderInfo = null;
+    if (user.gender) {
+      const genderData = await db
+        .select()
+        .from(attribute)
+        .where(eq(attribute.id, parseInt(user.gender)))
+        .limit(1);
+
+      if (genderData.length) {
+        genderInfo = genderData[0];
+      }
+    }
+
+    // Structure the profile data
+    const profileData: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone || undefined,
+      phone2: user.phone2 || undefined,
+      profilePic: user.profilePic || undefined,
+      coverImage: user.coverImage || undefined,
+      website: user.website || undefined,
+      foundedDate: user.foundedDate || undefined,
+      organization: user.organization || undefined,
+      canDesc: user.canDesc || undefined,
+      gender: user.gender || undefined,
+      genderInfo, // Add gender attribute info
+      dob: user.dob || undefined,
+      age: user.age || undefined,
+      socialMedia: {
+        facebook: user.facebook || undefined,
+        twitter: user.twitter || undefined,
+        linkedin: user.linkedin || undefined,
+        dribbble: user.dribbble || undefined,
+      },
+      location: {
+        state: user.state,
+        city: user.city,
+        pincode: user.pincode,
+        fullAddress: user.fullAddress || undefined,
+        stateInfo,
+        cityInfo,
+        countryInfo,
+      },
+      settings: {
+        publicView: user.publicView,
+        everify: user.everify,
+        status: user.status,
+        totalView: user.totalView,
+      },
+      utm: {
+        utmSource: user.utmSource || undefined,
+        utmMedium: user.utmMedium || undefined,
+        utmCampaign: user.utmCampaign || undefined,
+        utmContent: user.utmContent || undefined,
+      },
+      sectorInfo,
+      createdDate: user.createdDate,
+    };
+
+    // Structure the resume data
+    let resumeData: ResumeData | null = null;
+
+    if (userResume.length) {
+      const resume = userResume[0];
+
+      // Parse JSON strings and get attribute data
+      let educationData = null;
+      let experienceData = null;
+      let portfolioData = null;
+      let languageData = null;
+      let skillsInfo = [];
+      let locationInfo = [];
+
+      // Parse education and get attribute data for Education and Stream
+      try {
+        if (resume.education) {
+          educationData = JSON.parse(resume.education);
+          if (Array.isArray(educationData)) {
+            for (let edu of educationData) {
+              if (edu.Education) {
+                const eduAttributes = await getAttributesByIds([edu.Education]);
+                edu.EducationInfo = eduAttributes[0] || null;
+              }
+              if (edu.Stream) {
+                const streamAttributes = await getAttributesByIds([edu.Stream]);
+                edu.StreamInfo = streamAttributes[0] || null;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        educationData = resume.education;
+      }
+
+      // Parse experience
+      try {
+        if (resume.experience) {
+          experienceData = JSON.parse(resume.experience);
+        }
+      } catch (e) {
+        experienceData = resume.experience;
+      }
+
+      // Parse portfolio
+      try {
+        if (resume.portfolio) {
+          portfolioData = JSON.parse(resume.portfolio);
+        }
+      } catch (e) {
+        portfolioData = resume.portfolio;
+      }
+
+      // Parse language
+      try {
+        if (resume.language) {
+          languageData = JSON.parse(resume.language);
+        }
+      } catch (e) {
+        languageData = resume.language;
+      }
+
+      // Get skills attribute data
+      if (resume.skills && typeof resume.skills === "string") {
+        const skillIds = resume.skills.split(",").map((id) => id.trim());
+        skillsInfo = await getAttributesByIds(skillIds);
+      }
+
+      // Get location attribute data
+      if (resume.location && typeof resume.location === "string") {
+        const locationIds = resume.location.split(",").map((id) => id.trim());
+        locationInfo = await getAttributesByIds(locationIds);
+      }
+
+      resumeData = {
+        id: resume.id,
+        coverLetter: resume.coverLetter || undefined,
+        skills: resume.skills || undefined,
+        skillsInfo, // Add skills attribute info
+        location: resume.location || undefined,
+        locationInfo, // Add location attribute info
+        hobbies: resume.hobbies || undefined,
+        cv: resume.cv || undefined,
+        education: educationData,
+        experience: experienceData,
+        portfolio: portfolioData,
+        language: languageData,
+        noticePeriod: resume.noticePeriod || undefined,
+        award: resume.award || undefined,
+      };
+    }
+
+    // Prepare the complete response
+    const completeUserData: CompleteUserData = {
+      profile: profileData,
+      resume: resumeData,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "User data retrieved successfully",
+      data: completeUserData,
+    });
+  } catch (error) {
+    console.error("Error fetching current user data:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 };

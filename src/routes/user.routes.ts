@@ -32,6 +32,7 @@ import {
   addUserAward,
   deleteUserAward,
   userProfileLoader,
+  getCurrentUser,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -97,5 +98,6 @@ routes.patch("/awards", authenticateUser, updateUserAwards);
 routes.get("/awards", authenticateUser, getUserAwards);
 routes.post("/awards", authenticateUser, addUserAward);
 routes.delete("/awards", authenticateUser, deleteUserAward);
+routes.get("/current-user", authenticateUser, getCurrentUser);
 
 export { routes as UserRoutes };
