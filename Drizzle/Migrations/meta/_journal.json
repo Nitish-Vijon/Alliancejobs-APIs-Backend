@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1752994116553,
+      "tag": "0001_dry_retro_girl",
+      "breakpoints": true
+    }
+  ]
 }

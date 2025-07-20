@@ -10,6 +10,9 @@ import {
   getSkillsOptionsHandler,
   getLocationTypeOptionsHandler,
   addCustomAttributeHandler,
+  addCustomAttributesHandler,
+  getJobRoleTypesOptionsHandler,
+  writeWithAiHandler,
 } from "../controller/attribute.controller.js";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -63,7 +66,22 @@ export const getLocationTypeOptions = tryCatch(
   getLocationTypeOptionsHandler
 );
 
+export const getJobRoleTypesOptions = tryCatch(
+  "Get Job Role Types Options Handler",
+  getJobRoleTypesOptionsHandler
+);
+
 export const addCustomAttribute = tryCatch(
   "Add Custom Attribute Handler",
   addCustomAttributeHandler
+);
+
+export const addCustomAttributes = tryCatch(
+  "Add Custom Attribute Handler",
+  addCustomAttributesHandler
+);
+
+export const writeWithAi = tryCatch(
+  "Write With AI Handler",
+  writeWithAiHandler
 );

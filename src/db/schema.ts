@@ -1,3 +1,4 @@
+import { mysqlEnum } from "drizzle-orm/mysql-core";
 import {
   mysqlTable,
   index,
@@ -268,7 +269,6 @@ export const tblSubscribe = mysqlTable("tbl_subscribe", {
     .notNull(),
 });
 
-// The main problematic table - tblUsers with corrected schema
 export const tblUsers = mysqlTable("tbl_users", {
   id: int().notNull().primaryKey(), // Remove autoincrement as SQL doesn't show AUTO_INCREMENT
   compId: int("comp_id").default(0), // Allow NULL as per SQL
@@ -327,4 +327,20 @@ export const users = mysqlTable("users", {
   name: varchar({ length: 50 }).notNull(),
   email: varchar({ length: 50 }).notNull(),
   profileImage: text("profile_image").notNull(),
+});
+
+export const tblAIResponse = mysqlTable("tbl_ai_response", {
+  id: int().notNull().primaryKey(),
+  role: varchar("role", { length: 255 }),
+  prompt: longtext("prompt").notNull(),
+  answer: longtext("answer").notNull(),
+  type: mysqlEnum("type", [
+    "Address",
+    "Education",
+    "Experience",
+    "Portfolio",
+    "Awards",
+    "Skills",
+  ]).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
 });

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "dc003d23-3553-4f35-aab9-f211896a210d",
+  "id": "fe459127-31e7-442d-a20d-d40fa2e98c99",
   "prevId": "ca0b0187-5ee2-4120-8930-519c329c82ea",
   "tables": {
     "attribute": {
@@ -608,6 +608,73 @@
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
+    "tbl_ai_response": {
+      "name": "tbl_ai_response",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "prompt": {
+          "name": "prompt",
+          "type": "longtext",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "answer": {
+          "name": "answer",
+          "type": "longtext",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('Address','Education','Experience','Portfolio','Awards','Skills')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "tbl_ai_response_id": {
+          "name": "tbl_ai_response_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "tbl_ai_response_role_unique": {
+          "name": "tbl_ai_response_role_unique",
+          "columns": [
+            "role"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
     "tbl_admin": {
       "name": "tbl_admin",
       "columns": {
@@ -880,7 +947,7 @@
           "type": "int",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
         },
         "cand_id": {
           "name": "cand_id",
@@ -1371,7 +1438,7 @@
           "type": "int",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
         },
         "cand_id": {
           "name": "cand_id",

@@ -11,6 +11,9 @@ import {
   getSkillsOptions,
   getLocationTypeOptions,
   addCustomAttribute,
+  addCustomAttributes,
+  getJobRoleTypesOptions,
+  writeWithAi,
 } from "../services/attribute.service";
 
 const routes = Router();
@@ -25,9 +28,14 @@ routes.get("/industry", getIndustryOptions);
 routes.get("/salary-type", getSalaryTypeOptions);
 routes.get("/skills", getSkillsOptions);
 routes.get("/location-type", getLocationTypeOptions);
+routes.get("/job-role-types", getJobRoleTypesOptions);
 
-// POST route for adding custom attributes
-routes.post("/add-custom", addCustomAttribute);
+// POST route for adding custom Single attribute
+routes.post("/add-custom/:parentId", addCustomAttribute);
+
+// POST route for adding custom Multiple attributes
+routes.post("/add-customs/:parentId", addCustomAttributes);
+routes.post("/write-with-ai", writeWithAi);
 
 // Dynamic route last
 routes.get("/:parentId", getAttributeOptions);

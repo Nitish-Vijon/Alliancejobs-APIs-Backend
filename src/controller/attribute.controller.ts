@@ -1,11 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { db } from "../db";
-import { attribute, cities, tblCatSector } from "../db/schema";
+import { attribute, cities, tblAIResponse, tblCatSector } from "../db/schema";
 import { and, eq, like } from "drizzle-orm";
 import { ErrorHandler } from "../util/errorHandler";
-import { STATUS_CODES } from "../constants/statusCodes";
+import { STATUS_CODES, StatusCodes } from "../constants/statusCodes";
 import { ResponseHandler } from "../util/responseHandler";
 import { generateUniqueId } from "../util/generateTableId";
+import { runGemini } from "../util/writte_with_ai";
+import { findSimilarResponse } from "../util/matching";
 
 export const getAttributeOptionsHandler = async (
   req: Request,
@@ -447,6 +449,50 @@ export const getLocationTypeOptionsHandler = async (
   }
 };
 
+export const getJobRoleTypesOptionsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const jobrole = await db
+      .select({
+        id: attribute.id,
+        name: attribute.name,
+        icon: attribute.icon,
+      })
+      .from(attribute)
+      .where(eq(attribute.name, "Job-Role"));
+
+    if (jobrole.length === 0) {
+      next(
+        new ErrorHandler({
+          message: "Job-Role not found",
+          status: STATUS_CODES.BAD_REQUEST,
+        })
+      );
+    }
+
+    const jobroleTypes = await db
+      .select({
+        id: attribute.id,
+        name: attribute.name,
+        icon: attribute.icon,
+      })
+      .from(attribute)
+      .where(eq(attribute.parentId, jobrole[0].id.toString()));
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Location type options retrieved successfully.",
+        data: jobroleTypes,
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Add Custom Entry to Attribute Table
 export const addCustomAttributeHandler = async (
   req: Request,
@@ -507,5 +553,244 @@ export const addCustomAttributeHandler = async (
     );
   } catch (error) {
     next(error);
+  }
+};
+
+export const addCustomAttributesHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { names } = req.body;
+    const { parentId } = req.params;
+
+    // Validate input - must be array of names
+    if (!names || !Array.isArray(names) || !parentId) {
+      throw new ErrorHandler({
+        message: "Names (array) and parent ID are required.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    if (names.length === 0) {
+      throw new ErrorHandler({
+        message: "Names array cannot be empty.",
+        status: STATUS_CODES.BAD_REQUEST,
+      });
+    }
+
+    const results = {
+      created: [] as any[],
+      existing: [] as any[],
+      failed: [] as any[],
+    };
+
+    // Get all existing attributes for this parent to avoid duplicate checks
+    const existingAttributes = await db
+      .select({ id: attribute.id, name: attribute.name })
+      .from(attribute)
+      .where(eq(attribute.parentId, parentId));
+
+    const existingNames = new Set(
+      existingAttributes.map((attr) => attr.name.toLowerCase())
+    );
+
+    for (const name of names) {
+      try {
+        const trimmedName = name.trim();
+
+        if (!trimmedName) {
+          results.failed.push({
+            name: name,
+            reason: "Empty name",
+          });
+          continue;
+        }
+
+        // Check if already exists
+        if (existingNames.has(trimmedName.toLowerCase())) {
+          const existingAttr = existingAttributes.find(
+            (attr) => attr.name.toLowerCase() === trimmedName.toLowerCase()
+          );
+          results.existing.push(existingAttr);
+          continue;
+        }
+
+        // Add new attribute
+        const nextId = await generateUniqueId(attribute);
+        await db.insert(attribute).values({
+          id: nextId,
+          name: trimmedName,
+          parentId: parentId,
+          icon: null,
+        });
+
+        const [newAttribute] = await db
+          .select({
+            id: attribute.id,
+            name: attribute.name,
+            icon: attribute.icon,
+          })
+          .from(attribute)
+          .where(eq(attribute.id, nextId));
+
+        results.created.push(newAttribute);
+        // Add to existing names to prevent duplicates within the same request
+        existingNames.add(trimmedName.toLowerCase());
+      } catch (error) {
+        results.failed.push({
+          name: name,
+          reason: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    // Determine response status and message
+    let status: StatusCodes = STATUS_CODES.CREATED;
+    let message = "";
+
+    if (
+      results.created.length > 0 &&
+      results.existing.length === 0 &&
+      results.failed.length === 0
+    ) {
+      message = `${results.created.length} attribute(s) added successfully.`;
+    } else if (
+      results.created.length === 0 &&
+      results.existing.length > 0 &&
+      results.failed.length === 0
+    ) {
+      status = STATUS_CODES.OK;
+      message = "All attributes already exist.";
+    } else if (
+      results.created.length === 0 &&
+      results.existing.length === 0 &&
+      results.failed.length > 0
+    ) {
+      status = STATUS_CODES.BAD_REQUEST;
+      message = "Failed to add any attributes.";
+    } else {
+      status = STATUS_CODES.PARTIAL_CONTENT; // 206 for partial success
+      message = `Processed ${names.length} attribute(s): ${results.created.length} created, ${results.existing.length} already existed, ${results.failed.length} failed.`;
+    }
+
+    res.status(status).json(
+      new ResponseHandler({
+        message,
+        data: {
+          summary: {
+            total: names.length,
+            created: results.created.length,
+            existing: results.existing.length,
+            failed: results.failed.length,
+          },
+          created: results.created,
+          existing: results.existing,
+          failed: results.failed,
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const writeWithAiHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { type, role, prompt } = req.body;
+
+    // Validate input
+    if (!type || !prompt) {
+      res.status(400).json({
+        success: false,
+        message: "Type and prompt are required fields",
+      });
+      return;
+    }
+
+    // Validate type enum
+    const validTypes = [
+      "Address",
+      "Education",
+      "Experience",
+      "Portfolio",
+      "Awards",
+      "Skills",
+    ];
+    if (!validTypes.includes(type)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid type. Must be one of: " + validTypes.join(", "),
+      });
+      return;
+    }
+
+    // Check if similar prompt exists in database
+    let existingResponse: any;
+    if (type === "Experience") {
+      existingResponse = await findSimilarResponse(prompt, type, role);
+    } else {
+      existingResponse = await findSimilarResponse(prompt, type);
+    }
+
+    let aiResponse: string;
+
+    if (existingResponse) {
+      // Return cached response
+      aiResponse = existingResponse.answer;
+
+      res.status(200).json({
+        success: true,
+        message: "Response retrieved from similar cache",
+        data: {
+          answer: aiResponse,
+        },
+      });
+      return;
+    }
+
+    // Generate new AI response
+    const generatedText = await runGemini(prompt, type);
+
+    if (!generatedText) {
+      next(
+        new ErrorHandler({
+          message: "Failed to generate AI response",
+          status: STATUS_CODES.BAD_REQUEST,
+        })
+      );
+    }
+
+    const nextID = await generateUniqueId(tblAIResponse);
+
+    const dbrole = type === "Experience" ? role : null;
+    // Store new response in database
+    const insertResult = await db.insert(tblAIResponse).values({
+      id: nextID,
+      role: dbrole, // Using type as role
+      prompt: prompt,
+      answer: generatedText,
+      type: type as any,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "AI response generated and saved successfully",
+      data: {
+        answer: generatedText,
+      },
+    });
+  } catch (error) {
+    console.error("Error in writeWithAiHandler:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };

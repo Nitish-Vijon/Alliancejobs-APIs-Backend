@@ -10,6 +10,7 @@ export const config = {
   otp_username: process.env.OTP_USERNAME,
   otp_password: process.env.OTP_PASSWORD,
   otp_sender: process.env.OTP_SENDER,
+  gemini_api_key: process.env.GEMINI_API_KEY,
 };
 
 export const mustload = () => {
