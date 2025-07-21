@@ -7,6 +7,7 @@ import {
   tblJobApply,
   states,
   countries,
+  attribute,
 } from "../db/schema";
 import {
   and,
@@ -595,6 +596,21 @@ export const getJobDetailsHandler = async (
 
     // Format experience using JavaScript
 
+    const jobType = await db.query.attribute.findFirst({
+      where: eq(attribute.id, job.jobType),
+      columns: {
+        name: true,
+      },
+    });
+    const locationType = await db.query.attribute.findFirst({
+      where: eq(attribute.id, Number(job.locationType)),
+      columns: {
+        name: true,
+      },
+    });
+
+    console.log("Job Type: ", jobType);
+
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message: "Job details retrieved successfully",
@@ -604,8 +620,8 @@ export const getJobDetailsHandler = async (
           jobName: job.jobName,
           companyName: job.companyName,
           salary: formatSalaryRange(job.minSalary || 0, job.maxSalary || 0),
-          jobType: job.jobType,
-          locationType: job.locationType,
+          jobType: jobType.name,
+          locationType: locationType.name,
           jobDetails: job.jobDetails,
           aboutCompany: job.aboutCompany,
           exp: formatExperience(job.expMin, job.expMax, job.expFresher),
