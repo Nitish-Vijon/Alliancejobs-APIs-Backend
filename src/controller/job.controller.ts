@@ -595,13 +595,13 @@ export const getJobDetailsHandler = async (
     const job = jobDetails[0];
 
     // Format experience using JavaScript
-
     const jobType = await db.query.attribute.findFirst({
       where: eq(attribute.id, job.jobType),
       columns: {
         name: true,
       },
     });
+
     const locationType = await db.query.attribute.findFirst({
       where: eq(attribute.id, Number(job.locationType)),
       columns: {
@@ -609,7 +609,52 @@ export const getJobDetailsHandler = async (
       },
     });
 
-    console.log("Job Type: ", jobType);
+    let skills;
+
+    const skillsArray = job.skills.includes(",")
+      ? job.skills.split(",")
+      : [job.skills];
+
+    const isNumericArray = skillsArray.every(
+      (skill) => !isNaN(parseInt(skill))
+    );
+
+    if (isNumericArray) {
+      skills = await db
+        .select({
+          name: attribute.name,
+        })
+        .from(attribute)
+        .where(inArray(attribute.id, skillsArray.map(Number)));
+
+      skills = skills.map((skill) => skill.name);
+    } else {
+      skills = skillsArray;
+    }
+
+    const industry = await db.query.attribute.findFirst({
+      where: eq(attribute.id, Number(job.industry)),
+      columns: {
+        name: true,
+      },
+    });
+
+    const careerLevel = await db.query.attribute.findFirst({
+      where: eq(attribute.id, Number(job.careerLevel)),
+      columns: {
+        name: true,
+      },
+    });
+
+    let qualifications;
+    if (job.qualifications) {
+      qualifications = await db.query.attribute.findFirst({
+        where: eq(attribute.id, Number(job.qualifications)),
+        columns: {
+          name: true,
+        },
+      });
+    }
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
@@ -631,16 +676,16 @@ export const getJobDetailsHandler = async (
             job.stateName,
             job.countryName
           ),
-          skills: job.skills,
+          skills,
           // Additional fields that might be useful
           applicationDeadline: job.applicationDeadline,
           fullAddress: job.fullAddress,
-          industry: job.industry,
-          careerLevel: job.careerLevel,
-          qualifications: job.qualifications,
+          industry: industry.name || "",
+          careerLevel: careerLevel.name || "",
+          qualifications: qualifications.name || "",
           otherBenefits: job.otherBenefits,
           interviewMode: job.interviewMode,
-          immediateJoin: job.immediateJoin,
+          immediateJoin: job.immediateJoin == 1 ? true : false,
         },
       }).toJSON()
     );
