@@ -4313,3 +4313,115 @@ export const getCurrentUserHandler = async (
     });
   }
 };
+
+export const uploadProfilePicHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = Number(req.user?.id);
+    const file = req.file;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+      return;
+    }
+
+    if (!file) {
+      res.status(400).json({
+        success: false,
+        message: "No profile picture uploaded",
+      });
+      return;
+    }
+
+    if (!validateFileType(file)) {
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `Invalid file type. Allowed types: ${ALLOWED_EXTENSIONS.join(
+          ", "
+        )}`,
+      });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `File too large. Max size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+      });
+      return;
+    }
+
+    // Check user exists
+    const userResult = await db
+      .select({ id: tblUsers.id, profilePic: tblUsers.profilePic })
+      .from(tblUsers)
+      .where(eq(tblUsers.id, userId))
+      .limit(1);
+
+    if (!userResult || userResult.length === 0) {
+      await unlinkAsync(file.path);
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const user = userResult[0];
+    const fileName = file.filename;
+    const relativePath = file.path.replace(/\\/g, "/");
+
+    // Delete old profile picture if exists
+    if (user.profilePic && user.profilePic !== "NULL") {
+      try {
+        const oldFilePath = path.join(
+          process.cwd(),
+          "uploads",
+          user.profilePic
+        );
+        if (fs.existsSync(oldFilePath)) {
+          await unlinkAsync(oldFilePath);
+        }
+      } catch (error) {
+        console.warn("Could not delete old profile picture:", error);
+      }
+    }
+
+    // Update profile picture in DB
+    await db
+      .update(tblUsers)
+      .set({ profilePic: fileName })
+      .where(eq(tblUsers.id, userId));
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture uploaded successfully",
+      data: {
+        fileName,
+        originalName: file.originalname,
+        filePath: relativePath,
+        fileSize: file.size,
+        uploadDate: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error in uploadProfilePicHandler:", error);
+    if (req.file) {
+      try {
+        await unlinkAsync(req.file.path);
+      } catch (unlinkErr) {
+        console.warn("Failed to delete file on error:", unlinkErr);
+      }
+    }
+
+    next(error);
+  }
+};

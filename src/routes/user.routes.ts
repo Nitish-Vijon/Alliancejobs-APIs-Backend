@@ -33,6 +33,7 @@ import {
   deleteUserAward,
   userProfileLoader,
   getCurrentUser,
+  uploaduserProfilePic,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -52,9 +53,14 @@ routes.get(
 );
 routes.get("/user-recommendations", authenticateUser, userRecommendationsJobs);
 routes.patch("/basic-info", authenticateUser, updateUserBasicInfo);
+routes.post(
+  "/upload-profile-pic",
+  authenticateUser,
+  upload.single("profilePic"),
+  uploaduserProfilePic
+);
 routes.patch("/address", authenticateUser, updateUserAddress);
 routes.patch("/skills", authenticateUser, updateUserSkills);
-
 routes.post("/user-saved-jobs", authenticateUser, getUserSavedJobs);
 routes.get("/user-applied-jobs", authenticateUser, getUserAppliedJobs);
 routes.get("/user-favorite-jobs", authenticateUser, getUserFavoriteJobs);
