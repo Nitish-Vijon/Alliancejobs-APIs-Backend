@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { db } from "../db";
 import { attribute, cities, tblAIResponse, tblCatSector } from "../db/schema";
-import { and, eq, like } from "drizzle-orm";
+import { and, count, eq, like } from "drizzle-orm";
 import { ErrorHandler } from "../util/errorHandler";
 import { STATUS_CODES, StatusCodes } from "../constants/statusCodes";
 import { ResponseHandler } from "../util/responseHandler";
@@ -91,60 +91,67 @@ export const getCitiesHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search } = req.query;
+    const { search, limit = "100", page = "1" } = req.query;
 
-    // Case 1: No search term - return popular cities (initial dropdown)
-    if (!search || typeof search !== "string" || search.trim() === "") {
-      const popularCities = await db
-        .select({
-          id: cities.id,
-          name: cities.name,
-          stateId: cities.stateId,
-        })
-        .from(cities);
+    const parsedLimit = parseInt(limit as string);
+    const parsedPage = parseInt(page as string);
+    const offset = (parsedPage - 1) * parsedLimit;
 
-      res.status(STATUS_CODES.OK).json(
-        new ResponseHandler({
-          message: "Popular cities retrieved successfully.",
-          data: {
-            cities: popularCities,
-            showCustomOption: false, // Don't show custom option initially
-            searchTerm: "",
-          },
-        }).toJSON()
-      );
-    }
-
-    // Case 2: User is searching - find matching cities
     const searchTerm = typeof search === "string" ? search.trim() : "";
-    const matchingCities = await db
+
+    const whereClause =
+      searchTerm === "" ? undefined : like(cities.name, `%${searchTerm}%`);
+
+    // Fetch paginated cities
+    const citiesList = await db
       .select({
         id: cities.id,
         name: cities.name,
         stateId: cities.stateId,
       })
       .from(cities)
-      .where(like(cities.name, `%${searchTerm}%`))
-      .orderBy(cities.name);
+      .where(whereClause)
+      .orderBy(cities.name)
+      .limit(parsedLimit)
+      .offset(offset);
 
-    // Prepare response with custom option
-    const response = {
-      cities: matchingCities,
-      searchTerm: searchTerm,
-      showCustomOption: true,
-      customCity: {
-        id: -1, // Special ID for custom entry
+    // Fetch total count
+    const totalCountResult = await db
+      .select({ count: count() })
+      .from(cities)
+      .where(whereClause);
+
+    const total = Number(totalCountResult[0]?.count ?? 0);
+    const totalPages = Math.ceil(total / parsedLimit);
+    const hasNextPage = parsedPage * parsedLimit < total;
+
+    const response: any = {
+      cities: citiesList,
+      searchTerm,
+      showCustomOption: !!searchTerm,
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages,
+        hasNextPage,
+      },
+    };
+
+    if (searchTerm) {
+      response.customCity = {
+        id: -1,
         name: searchTerm,
         stateId: null,
         isCustom: true,
-      },
-    };
+      };
+    }
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message:
-          matchingCities.length > 0
-            ? `Found ${matchingCities.length} cities matching "${searchTerm}"`
+          citiesList.length > 0
+            ? `Found ${citiesList.length} cities matching "${searchTerm}"`
             : `No cities found matching "${searchTerm}". You can enter it as a custom city.`,
         data: response,
       }).toJSON()
