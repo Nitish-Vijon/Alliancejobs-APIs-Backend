@@ -91,7 +91,7 @@ export const getCitiesHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search, limit = "100", page = "1" } = req.query;
+    const { search, limit = "1000", page = "1" } = req.query;
 
     const parsedLimit = parseInt(limit as string);
     const parsedPage = parseInt(page as string);
@@ -384,8 +384,7 @@ export const getSkillsOptionsHandler = async (
           icon: attribute.icon,
         })
         .from(attribute)
-        .where(eq(attribute.parentId, skillsParentId))
-        .limit(parseInt(limit as string));
+        .where(eq(attribute.parentId, skillsParentId));
 
       res.status(STATUS_CODES.OK).json(
         new ResponseHandler({
@@ -408,8 +407,7 @@ export const getSkillsOptionsHandler = async (
           eq(attribute.parentId, skillsParentId),
           like(attribute.name, `%${searchTerm}%`)
         )
-      )
-      .limit(parseInt(limit as string));
+      );
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
