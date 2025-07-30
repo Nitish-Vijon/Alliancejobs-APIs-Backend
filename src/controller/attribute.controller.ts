@@ -324,7 +324,7 @@ export const getIndustryOptionsHandler = async (
       query = baseQuery;
     }
 
-    const industries = await query.limit(parseInt(limit as string));
+    const industries = await query;
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
