@@ -91,7 +91,7 @@ export const getCitiesHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search, limit = "20" } = req.query;
+    const { search } = req.query;
 
     // Case 1: No search term - return popular cities (initial dropdown)
     if (!search || typeof search !== "string" || search.trim() === "") {
@@ -101,8 +101,7 @@ export const getCitiesHandler = async (
           name: cities.name,
           stateId: cities.stateId,
         })
-        .from(cities)
-        .limit(parseInt(limit as string));
+        .from(cities);
 
       res.status(STATUS_CODES.OK).json(
         new ResponseHandler({
@@ -126,7 +125,6 @@ export const getCitiesHandler = async (
       })
       .from(cities)
       .where(like(cities.name, `%${searchTerm}%`))
-      .limit(parseInt(limit as string))
       .orderBy(cities.name);
 
     // Prepare response with custom option
