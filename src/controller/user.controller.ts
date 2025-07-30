@@ -2723,7 +2723,7 @@ export const addUserEducationHandler = async (
       .from(tblResume)
       .where(eq(tblResume.candId, parsedUserId.toString()));
 
-    let currentEducation = [];
+    let currentEducation: any[] = [];
 
     if (resume && resume.education) {
       try {
@@ -2733,12 +2733,13 @@ export const addUserEducationHandler = async (
       }
     }
 
-    // Add new education entry
-    const newEducation = {
-      ...educationData,
-    };
+    // Normalize to array
+    const newEducationEntries: any[] = Array.isArray(educationData)
+      ? educationData
+      : [educationData];
 
-    currentEducation.push(newEducation);
+    // Add new entries to existing list
+    currentEducation.push(...newEducationEntries);
 
     // Update in database
     await upsertResumeData(parsedUserId, {
@@ -2747,10 +2748,11 @@ export const addUserEducationHandler = async (
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
-        message: "Education entry added successfully.",
+        message: `Added ${newEducationEntries.length} education entr${
+          newEducationEntries.length > 1 ? "ies" : "y"
+        } successfully.`,
         data: {
-          newEducation,
-          educationIndex: currentEducation.length - 1,
+          newEducation: newEducationEntries,
           totalEducationCount: currentEducation.length,
         },
       }).toJSON()
@@ -2985,48 +2987,51 @@ export const addUserExperienceHandler = async (
 
     const parsedUserId = parseInt(userId.toString());
 
-    // Get current experience data
+    // Fetch current experience data
     const [resume] = await db
       .select({ experience: tblResume.experience })
       .from(tblResume)
       .where(eq(tblResume.candId, parsedUserId.toString()));
 
-    let currentExperience = [];
+    let currentExperience: any[] = [];
 
     if (resume && resume.experience) {
       try {
         currentExperience = JSON.parse(resume.experience);
-        // Handle nested array structure if it exists
+
+        // Handle nested array structure like: [[...]]
         if (
           Array.isArray(currentExperience) &&
           currentExperience.length > 0 &&
           Array.isArray(currentExperience[0])
         ) {
-          currentExperience = currentExperience[0]; // Extract from nested array
+          currentExperience = currentExperience[0]; // flatten
         }
       } catch (error) {
         currentExperience = [];
       }
     }
 
-    // Add new experience entry
-    const newExperience = {
-      ...experienceData,
-    };
+    // Normalize input to an array
+    const newExperienceEntries: any[] = Array.isArray(experienceData)
+      ? experienceData
+      : [experienceData];
 
-    currentExperience.push(newExperience);
+    // Add new entries to the existing list
+    currentExperience.push(...newExperienceEntries);
 
-    // Update in database (wrap in array to maintain structure)
+    // Save updated experience (wrapped in array to preserve expected structure)
     await upsertResumeData(parsedUserId, {
       experience: JSON.stringify([currentExperience]),
     });
 
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
-        message: "Experience entry added successfully.",
+        message: `Added ${newExperienceEntries.length} experience entr${
+          newExperienceEntries.length > 1 ? "ies" : "y"
+        } successfully.`,
         data: {
-          newExperience,
-          experienceIndex: currentExperience.length - 1,
+          newExperience: newExperienceEntries,
           totalExperienceCount: currentExperience.length,
         },
       }).toJSON()
