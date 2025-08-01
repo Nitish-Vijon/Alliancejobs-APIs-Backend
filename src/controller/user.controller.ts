@@ -2823,18 +2823,20 @@ export const getUserExperienceHandler = async (
       .from(tblResume)
       .where(eq(tblResume.candId, parsedUserId.toString()));
 
+    console.log("Resume data:", JSON.parse(resume.experience));
     let experienceData = [];
 
     if (resume && resume.experience) {
       try {
         experienceData = JSON.parse(resume.experience);
-        // Handle nested array structure if it exists
-        if (
+
+        // Handle nested array structure - flatten it completely
+        while (
           Array.isArray(experienceData) &&
           experienceData.length > 0 &&
           Array.isArray(experienceData[0])
         ) {
-          experienceData = experienceData[0]; // Extract from nested array
+          experienceData = experienceData[0];
         }
       } catch (error) {
         console.error("Error parsing experience JSON:", error);
@@ -2842,28 +2844,27 @@ export const getUserExperienceHandler = async (
       }
     }
 
-    // Get all unique IDs from experience data that need to be converted
+    // Get all unique IDs from experience data using CORRECT field names
     const allIds = new Set<number>();
     experienceData.forEach((exp: any) => {
-      // Check industry field
+      // Use camelCase field names as they appear in your DB
       if (exp.industry && !isNaN(parseInt(exp.industry))) {
         allIds.add(parseInt(exp.industry));
       }
-      // Check sector field
       if (exp.sector && !isNaN(parseInt(exp.sector))) {
         allIds.add(parseInt(exp.sector));
       }
-      // Check job_type field
-      if (exp.job_type && !isNaN(parseInt(exp.job_type))) {
-        allIds.add(parseInt(exp.job_type));
+      if (exp.jobType && !isNaN(parseInt(exp.jobType))) {
+        allIds.add(parseInt(exp.jobType));
       }
-      // Check Career_Level field
-      if (exp.Career_Level && !isNaN(parseInt(exp.Career_Level))) {
-        allIds.add(parseInt(exp.Career_Level));
+      if (exp.careerLevel && !isNaN(parseInt(exp.careerLevel))) {
+        allIds.add(parseInt(exp.careerLevel));
       }
-      // Check Salary_Type field
-      if (exp.Salary_Type && !isNaN(parseInt(exp.Salary_Type))) {
-        allIds.add(parseInt(exp.Salary_Type));
+      if (exp.salaryType && !isNaN(parseInt(exp.salaryType))) {
+        allIds.add(parseInt(exp.salaryType));
+      }
+      if (exp.role && !isNaN(parseInt(exp.role))) {
+        allIds.add(parseInt(exp.role));
       }
     });
 
@@ -2883,9 +2884,12 @@ export const getUserExperienceHandler = async (
       }, {} as Record<number, string>);
     }
 
-    // Helper function to convert ID to name with better fallback
-    const getAttributeName = (value: string | number): string => {
-      if (!value) return "";
+    // Helper function to convert ID to name
+    const getAttributeName = (value: string | number | boolean): string => {
+      if (!value || value === "") return "";
+
+      // Handle boolean values
+      if (typeof value === "boolean") return value.toString();
 
       // If it's already a string and not a number, return as is
       if (typeof value === "string" && isNaN(parseInt(value))) {
@@ -2899,47 +2903,44 @@ export const getUserExperienceHandler = async (
       return attributeMap[numId] || value.toString();
     };
 
-    // Format the experience data for response - keeping only existing fields
+    // Format the experience data - use actual field names from DB
     const formattedExperience = experienceData.map(
       (exp: any, index: number) => ({
-        id: index, // Using index as ID for frontend reference
-        originalData: {
-          // Convert IDs to names in originalData
-          industry: getAttributeName(exp.industry),
-          sector: getAttributeName(exp.sector),
-          Company: exp.Company || "Not specified",
-          Designation: exp.Designation || "Not specified",
-          job_type: getAttributeName(exp.job_type),
-          Career_Level: getAttributeName(exp.Career_Level),
-          Start_Date: exp.Start_Date || "Not specified",
-          End_Date: exp.End_Date || "Not specified",
-          Experience: exp.Experience || "Not specified",
-          Salary_Type: getAttributeName(exp.Salary_Type),
-          Salary: exp.Salary || "Not specified",
-          Role: exp.Role || "Not specified",
-          // Keep any other fields as they are
-          ...Object.keys(exp).reduce((acc, key) => {
-            if (
-              ![
-                "industry",
-                "sector",
-                "Company",
-                "Designation",
-                "job_type",
-                "Career_Level",
-                "Start_Date",
-                "End_Date",
-                "Experience",
-                "Salary_Type",
-                "Salary",
-                "Role",
-              ].includes(key)
-            ) {
-              acc[key] = getAttributeName(exp[key]);
-            }
-            return acc;
-          }, {} as any),
-        },
+        id: index,
+        company: exp.company || "Not specified",
+        designation: exp.designation || "Not specified",
+        industry: getAttributeName(exp.industry),
+        sector: getAttributeName(exp.sector),
+        jobType: getAttributeName(exp.jobType),
+        careerLevel: getAttributeName(exp.careerLevel),
+        salaryType: getAttributeName(exp.salaryType),
+        salary: exp.salary || "Not specified",
+        role: getAttributeName(exp.role),
+        startDate: exp.startDate || "Not specified",
+        endDate: exp.endDate || "Not specified",
+        isPresent: exp.isPresent || false,
+        // Add any additional fields that might exist
+        ...Object.keys(exp).reduce((acc, key) => {
+          if (
+            ![
+              "company",
+              "designation",
+              "industry",
+              "sector",
+              "jobType",
+              "careerLevel",
+              "salaryType",
+              "salary",
+              "role",
+              "startDate",
+              "endDate",
+              "isPresent",
+            ].includes(key)
+          ) {
+            acc[key] = getAttributeName(exp[key]);
+          }
+          return acc;
+        }, {} as any),
       })
     );
 
