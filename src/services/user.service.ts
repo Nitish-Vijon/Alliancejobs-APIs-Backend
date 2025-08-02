@@ -33,6 +33,7 @@ import {
   userProfileLoaderHandler,
   getCurrentUserHandler,
   uploadProfilePicHandler,
+  getDrowerStatusHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -193,4 +194,9 @@ export const getCurrentUser = tryCatch(
 export const uploaduserProfilePic = tryCatch(
   "Upload User Profile Pic",
   uploadProfilePicHandler
+);
+
+export const getDrowerStatus = tryCatch(
+  "Get Drower Status",
+  getDrowerStatusHandler
 );

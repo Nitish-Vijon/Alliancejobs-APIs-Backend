@@ -34,6 +34,7 @@ import {
   userProfileLoader,
   getCurrentUser,
   uploaduserProfilePic,
+  getDrowerStatus,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -105,5 +106,7 @@ routes.get("/awards", authenticateUser, getUserAwards);
 routes.post("/awards", authenticateUser, addUserAward);
 routes.delete("/awards", authenticateUser, deleteUserAward);
 routes.get("/current-user", authenticateUser, getCurrentUser);
+
+routes.get("/drower-status", authenticateUser, getDrowerStatus);
 
 export { routes as UserRoutes };

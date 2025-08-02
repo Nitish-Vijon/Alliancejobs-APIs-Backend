@@ -175,6 +175,25 @@ interface CompleteUserData {
   resume: ResumeData | null;
 }
 
+interface ProfileCompletionStatus {
+  profileCompletion: number;
+  education: number;
+  experience: number;
+  portfolio: number;
+  awards: number;
+  skills: number;
+  location: number;
+  sections: {
+    basicProfile: boolean;
+    education: boolean;
+    experience: boolean;
+    portfolio: boolean;
+    awards: boolean;
+    skills: boolean;
+    location: boolean;
+  };
+}
+
 export const getOtpForUserHandler = async (
   req: Request,
   res: Response,
@@ -4431,3 +4450,318 @@ export const uploadProfilePicHandler = async (
     next(error);
   }
 };
+
+export const getDrowerStatusHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+      return;
+    }
+
+    // Fetch user basic profile data
+    const [user] = await db
+      .select()
+      .from(tblUsers)
+      .where(eq(tblUsers.id, Number(userId)))
+      .limit(1);
+
+    // Fetch user resume data
+    const [resume] = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    // Calculate completion status for each section
+    const completionStatus = calculateProfileCompletion(user, resume);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile completion status retrieved successfully",
+      data: completionStatus,
+    });
+  } catch (error) {
+    console.error("Error in getDrowerStatusHandler:", error);
+    next(error);
+  }
+};
+
+function calculateProfileCompletion(
+  user: any,
+  resume: any
+): ProfileCompletionStatus {
+  // Basic Profile Completion (from tblUsers)
+  const basicProfileFields = [
+    user.username,
+    user.email,
+    user.phone,
+    user.profilePic,
+    user.canDesc, // candidate description
+    user.gender,
+    user.dob,
+  ];
+  const basicProfileCompleted = basicProfileFields.filter(
+    (field) => field && field !== "NULL" && field.toString().trim() !== ""
+  ).length;
+  const basicProfilePercentage = Math.round(
+    (basicProfileCompleted / basicProfileFields.length) * 100
+  );
+
+  // Education Completion
+  let educationPercentage = 0;
+  let hasEducation = false;
+  if (resume?.education) {
+    try {
+      const educationData =
+        typeof resume.education === "string"
+          ? JSON.parse(resume.education)
+          : resume.education;
+
+      if (Array.isArray(educationData) && educationData.length > 0) {
+        hasEducation = true;
+        // Check if education entries have required fields
+        const validEducation = educationData.filter(
+          (edu) => edu.Education && edu.Stream && edu.Institute
+        );
+        educationPercentage = validEducation.length > 0 ? 100 : 50;
+      }
+    } catch (e) {
+      console.error("Error parsing education data:", e);
+    }
+  }
+
+  // Experience Completion
+  let experiencePercentage = 0;
+  let hasExperience = false;
+  if (resume?.experience) {
+    try {
+      let experienceData =
+        typeof resume.experience === "string"
+          ? JSON.parse(resume.experience)
+          : resume.experience;
+
+      // Handle nested arrays - flatten if it's [[{...}]] format
+      if (
+        Array.isArray(experienceData) &&
+        experienceData.length > 0 &&
+        Array.isArray(experienceData[0])
+      ) {
+        experienceData = experienceData.flat();
+      }
+
+      if (Array.isArray(experienceData) && experienceData.length > 0) {
+        hasExperience = true;
+        // Check if experience entries have required fields
+        const validExperience = experienceData.filter(
+          (exp) =>
+            (exp.Company || exp.company) &&
+            (exp.Designation || exp.designation) &&
+            (exp.Start_Date || exp.start_date || exp.startDate)
+        );
+
+        if (validExperience.length > 0) {
+          // Calculate experience completion based on filled fields
+          let totalFields = 0;
+          let filledFields = 0;
+
+          validExperience.forEach((exp) => {
+            const fields = [
+              exp.Company || exp.company,
+              exp.Designation || exp.designation,
+              exp.Start_Date || exp.start_date || exp.startDate,
+              exp.End_Date ||
+                exp.end_date ||
+                exp.endDate ||
+                (exp.isPresent ? "Present" : ""),
+              exp.job_type || exp.jobType,
+              exp.Career_Level || exp.careerLevel,
+              exp.industry,
+              exp.sector,
+              exp.Salary_Type || exp.salaryType,
+              exp.Salary || exp.salary,
+              exp.Role || exp.role,
+              exp.Experience || exp.experience,
+            ];
+
+            totalFields += fields.length;
+            filledFields += fields.filter(
+              (field) =>
+                field &&
+                field !== "NULL" &&
+                field.toString().trim() !== "" &&
+                field !== 0
+            ).length;
+          });
+
+          experiencePercentage = Math.round((filledFields / totalFields) * 100);
+        } else {
+          experiencePercentage = 0;
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing experience data:", e);
+    }
+  }
+
+  // Portfolio Completion
+  let portfolioPercentage = 0;
+  let hasPortfolio = false;
+  if (resume?.portfolio) {
+    try {
+      const portfolioData =
+        typeof resume.portfolio === "string"
+          ? JSON.parse(resume.portfolio)
+          : resume.portfolio;
+
+      if (portfolioData && Object.keys(portfolioData).length > 0) {
+        hasPortfolio = true;
+        portfolioPercentage = 100;
+      }
+    } catch (e) {
+      // If it's just a string and not empty
+      if (
+        resume.portfolio.toString().trim() !== "" &&
+        resume.portfolio !== "NULL"
+      ) {
+        hasPortfolio = true;
+        portfolioPercentage = 100;
+      }
+    }
+  }
+
+  // Awards/Honors Completion
+  let awardsPercentage = 0;
+  let hasAwards = false;
+  if (resume?.award) {
+    try {
+      const awardsData =
+        typeof resume.award === "string"
+          ? JSON.parse(resume.award)
+          : resume.award;
+
+      if (Array.isArray(awardsData) && awardsData.length > 0) {
+        hasAwards = true;
+        const validAwards = awardsData.filter(
+          (award) => award.Award && award.Date
+        );
+        awardsPercentage = validAwards.length > 0 ? 100 : 50;
+      }
+    } catch (e) {
+      // If it's just a string and not empty
+      if (resume.award.toString().trim() !== "" && resume.award !== "NULL") {
+        hasAwards = true;
+        awardsPercentage = 100;
+      }
+    }
+  }
+
+  // Hobbies completion (if stored in resume)
+  let hasHobbies = false;
+  if (resume?.hobbies) {
+    try {
+      const hobbiesData =
+        typeof resume.hobbies === "string"
+          ? JSON.parse(resume.hobbies)
+          : resume.hobbies;
+
+      if (Array.isArray(hobbiesData) && hobbiesData.length > 0) {
+        hasHobbies = true;
+      }
+    } catch (e) {
+      if (
+        resume.hobbies.toString().trim() !== "" &&
+        resume.hobbies !== "NULL"
+      ) {
+        hasHobbies = true;
+      }
+    }
+  }
+
+  // Skills Completion
+  let skillsPercentage = 0;
+  let hasSkills = false;
+  if (resume?.skills) {
+    try {
+      const skillsData =
+        typeof resume.skills === "string"
+          ? JSON.parse(resume.skills)
+          : resume.skills;
+
+      if (Array.isArray(skillsData) && skillsData.length > 0) {
+        hasSkills = true;
+        skillsPercentage = 100;
+      }
+    } catch (e) {
+      // If it's just a comma-separated string
+      const skillsArray = resume.skills
+        .split(",")
+        .filter((skill) => skill.trim() !== "" && skill.trim() !== "NULL");
+      if (skillsArray.length > 0) {
+        hasSkills = true;
+        skillsPercentage = 100;
+      }
+    }
+  }
+
+  // Location Completion
+  const locationFields = [user.state, user.city, user.fullAddress];
+  const locationCompleted = locationFields.filter(
+    (field) =>
+      field && field !== 0 && field !== "NULL" && field.toString().trim() !== ""
+  ).length;
+  const locationPercentage = Math.round(
+    (locationCompleted / locationFields.length) * 100
+  );
+  const hasLocation = locationPercentage > 0;
+
+  // Calculate overall profile completion
+  const sections = [
+    basicProfilePercentage > 0,
+    hasEducation,
+    hasExperience,
+    hasPortfolio,
+    hasAwards,
+    hasSkills,
+    hasLocation,
+  ];
+  const completedSections = sections.filter(Boolean).length;
+  const overallCompletion = Math.round(
+    (completedSections / sections.length) * 100
+  );
+
+  return {
+    profileCompletion: overallCompletion,
+    education: educationPercentage,
+    experience: experiencePercentage,
+    portfolio: portfolioPercentage,
+    awards: awardsPercentage,
+    skills: skillsPercentage,
+    location: locationPercentage,
+    sections: {
+      basicProfile: basicProfilePercentage > 50,
+      education: hasEducation,
+      experience: hasExperience,
+      portfolio: hasPortfolio,
+      awards: hasAwards || hasHobbies, // Combining awards and hobbies
+      skills: hasSkills,
+      location: hasLocation,
+    },
+  };
+}
