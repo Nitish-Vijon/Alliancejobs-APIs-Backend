@@ -4578,8 +4578,7 @@ function calculateProfileCompletion(
 
         if (validExperience.length > 0) {
           // Calculate experience completion based on filled fields
-          let totalFields = 0;
-          let filledFields = 0;
+          let totalPercentage = 0;
 
           validExperience.forEach((exp) => {
             const fields = [
@@ -4600,17 +4599,23 @@ function calculateProfileCompletion(
               exp.Experience || exp.experience,
             ];
 
-            totalFields += fields.length;
-            filledFields += fields.filter(
+            const filledFields = fields.filter(
               (field) =>
                 field &&
                 field !== "NULL" &&
                 field.toString().trim() !== "" &&
                 field !== 0
             ).length;
+
+            const objectPercentage = Math.round(
+              (filledFields / fields.length) * 100
+            );
+            totalPercentage += objectPercentage;
           });
 
-          experiencePercentage = Math.round((filledFields / totalFields) * 100);
+          experiencePercentage = Math.round(
+            totalPercentage / validExperience.length
+          );
         } else {
           experiencePercentage = 0;
         }
@@ -4630,9 +4635,38 @@ function calculateProfileCompletion(
           ? JSON.parse(resume.portfolio)
           : resume.portfolio;
 
-      if (portfolioData && Object.keys(portfolioData).length > 0) {
+      if (Array.isArray(portfolioData) && portfolioData.length > 0) {
         hasPortfolio = true;
-        portfolioPercentage = 100;
+
+        let totalPercentage = 0;
+
+        portfolioData.forEach((portfolio) => {
+          const fields = [
+            portfolio.title,
+            portfolio.url,
+            portfolio.description,
+            // Check if image is not dummy (doesn't contain com.example.alliance_job)
+            portfolio.image &&
+            !portfolio.image.includes("com.example.alliance_job")
+              ? portfolio.image
+              : null,
+          ];
+
+          const filledFields = fields.filter(
+            (field) =>
+              field && field !== "NULL" && field.toString().trim() !== ""
+          ).length;
+
+          const objectPercentage = Math.round(
+            (filledFields / fields.length) * 100
+          );
+          console.log("PORTFOLIO PERCENTAGE ===>", objectPercentage);
+          totalPercentage += objectPercentage;
+        });
+
+        portfolioPercentage = Math.round(
+          totalPercentage / portfolioData.length
+        );
       }
     } catch (e) {
       // If it's just a string and not empty
@@ -4641,7 +4675,7 @@ function calculateProfileCompletion(
         resume.portfolio !== "NULL"
       ) {
         hasPortfolio = true;
-        portfolioPercentage = 100;
+        portfolioPercentage = 25; // Basic completion if it's just a string
       }
     }
   }
@@ -4658,16 +4692,41 @@ function calculateProfileCompletion(
 
       if (Array.isArray(awardsData) && awardsData.length > 0) {
         hasAwards = true;
-        const validAwards = awardsData.filter(
-          (award) => award.Award && award.Date
-        );
-        awardsPercentage = validAwards.length > 0 ? 100 : 50;
+
+        let totalPercentage = 0;
+
+        awardsData.forEach((award) => {
+          const fields = [
+            award.Award || award.award,
+            award.Date || award.date,
+            award.Award_Description || award.awardDescription,
+            // Check if image is not dummy (doesn't contain com.example.alliance_job)
+            (award.Award_image || award.image) &&
+            !(award.Award_image || award.image).includes(
+              "com.example.alliance_job"
+            )
+              ? award.Award_image || award.image
+              : null,
+          ];
+
+          const filledFields = fields.filter(
+            (field) =>
+              field && field !== "NULL" && field.toString().trim() !== ""
+          ).length;
+
+          const objectPercentage = Math.round(
+            (filledFields / fields.length) * 100
+          );
+          totalPercentage += objectPercentage;
+        });
+
+        awardsPercentage = Math.round(totalPercentage / awardsData.length);
       }
     } catch (e) {
       // If it's just a string and not empty
       if (resume.award.toString().trim() !== "" && resume.award !== "NULL") {
         hasAwards = true;
-        awardsPercentage = 100;
+        awardsPercentage = 25; // Basic completion if it's just a string
       }
     }
   }
