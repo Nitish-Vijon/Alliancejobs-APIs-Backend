@@ -85,26 +85,26 @@ routes.get("/download-resume/:filename", authenticateUser, download_Resume);
 routes.patch("/education", authenticateUser, updateUserEducation);
 routes.get("/education", authenticateUser, getUserEducation);
 routes.post("/education", authenticateUser, addUserEducation);
-routes.post("/education", authenticateUser, deleteUserEducation);
+routes.post("/delete/education", authenticateUser, deleteUserEducation);
 
 // Experience Routes
 routes.patch("/experience", authenticateUser, updateUserExperience);
 routes.get("/experience", authenticateUser, getUserExperience);
 routes.post("/experience", authenticateUser, addUserExperience);
-routes.post("/experience", authenticateUser, deleteUserExperience);
+routes.post("/delete/experience", authenticateUser, deleteUserExperience);
 
 // Portfolio Routes
 routes.patch("/portfolio", authenticateUser, updateUserPortfolio);
 routes.get("/portfolio", authenticateUser, getUserPortfolio);
 routes.post("/portfolio", authenticateUser, addUserPortfolio);
-routes.post("/portfolio", authenticateUser, deleteUserPortfolio);
+routes.post("/delete/portfolio", authenticateUser, deleteUserPortfolio);
 routes.get("/profile-loader", authenticateUser, userProfileLoader);
 
 // Awards Routes
 routes.patch("/awards", authenticateUser, updateUserAwards);
 routes.get("/awards", authenticateUser, getUserAwards);
 routes.post("/awards", authenticateUser, addUserAward);
-routes.post("/awards", authenticateUser, deleteUserAward);
+routes.post("/delete/awards", authenticateUser, deleteUserAward);
 routes.get("/current-user", authenticateUser, getCurrentUser);
 
 routes.get("/drower-status", authenticateUser, getDrowerStatus);

@@ -3274,17 +3274,11 @@ export const getUserPortfolioHandler = async (
       (portfolio: any, index: number) => ({
         id: index, // Using index as ID for frontend reference
         originalData: {
-          Title: portfolio.Title || "Not specified",
-          Url: portfolio.Url || "Not specified",
-          Image: portfolio.Image || "Not specified",
-          Description: portfolio.Description || "Not specified",
-          // Keep any other fields as they are
-          ...Object.keys(portfolio).reduce((acc, key) => {
-            if (!["Title", "Url", "Image", "Description"].includes(key)) {
-              acc[key] = portfolio[key];
-            }
-            return acc;
-          }, {} as any),
+          Title: portfolio.Title || portfolio.title || "Not specified",
+          Url: portfolio.Url || portfolio.url || "Not specified",
+          Image: portfolio.Image || portfolio.image || "Not specified",
+          Description:
+            portfolio.Description || portfolio.description || "Not specified",
         },
       })
     );
@@ -4274,6 +4268,20 @@ export const getCurrentUserHandler = async (
       try {
         if (resume.portfolio) {
           portfolioData = JSON.parse(resume.portfolio);
+
+          // Format the portfolio data for response - keeping only existing fields
+          const formattedPortfolio = portfolioData.map(
+            (portfolio: any, index: number) => ({
+              title: portfolio.Title || portfolio.title || "Not specified",
+              url: portfolio.Url || portfolio.url || "Not specified",
+              image: portfolio.Image || portfolio.image || "Not specified",
+              description:
+                portfolio.Description ||
+                portfolio.description ||
+                "Not specified",
+            })
+          );
+          portfolioData = formattedPortfolio;
         }
       } catch (e) {
         portfolioData = resume.portfolio;
