@@ -91,7 +91,7 @@ export const getCitiesHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search, limit = "1000", page = "1" } = req.query;
+    const { search, limit = "100000", page = "1" } = req.query;
 
     const parsedLimit = parseInt(limit as string);
     const parsedPage = parseInt(page as string);
@@ -234,7 +234,7 @@ export const getEducationOptionsHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search, limit = "20" } = req.query;
+    const { search } = req.query;
     const educationParentId = "21";
 
     if (!search || typeof search !== "string" || search.trim() === "") {
@@ -245,8 +245,7 @@ export const getEducationOptionsHandler = async (
           icon: attribute.icon,
         })
         .from(attribute)
-        .where(eq(attribute.parentId, educationParentId))
-        .limit(parseInt(limit as string));
+        .where(eq(attribute.parentId, educationParentId));
 
       res.status(STATUS_CODES.OK).json(
         new ResponseHandler({
@@ -269,8 +268,7 @@ export const getEducationOptionsHandler = async (
           eq(attribute.parentId, educationParentId),
           like(attribute.name, `%${searchTerm}%`)
         )
-      )
-      .limit(parseInt(limit as string));
+      );
 
     const response = {
       searchTerm: searchTerm,
@@ -305,7 +303,7 @@ export const getIndustryOptionsHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { search, limit = "50" } = req.query;
+    const { search } = req.query;
 
     // Since industry data might be in tblCatSector table, let's fetch from there
     // Build the base select query
