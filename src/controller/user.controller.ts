@@ -61,15 +61,16 @@ interface UserStats {
   resumeStatus: {
     uploaded: boolean;
     completeness: number;
-    sections: {
-      coverLetter: boolean;
-      skills: boolean;
-      education: boolean;
-      experience: boolean;
-      portfolio: boolean;
-      language: boolean;
-      award: boolean;
-    };
+    sections:
+      | {
+          skills: boolean;
+          education: boolean;
+        }
+      | {
+          experience: boolean;
+          skills: boolean;
+          education: boolean;
+        };
   };
   accountInfo: {
     accountAge: number; // in days
@@ -3909,27 +3910,13 @@ export const userProfileLoaderHandler = async (
 
   const resume = resumeData[0] || null;
 
-  // Calculate profile completion
+  // Calculate profile completion - Only specific fields
   const profileFields = [
     { field: "username", value: user.username },
     { field: "email", value: user.email },
-    { field: "phone", value: user.phone },
-    { field: "profilePic", value: user.profilePic },
-    { field: "gender", value: user.gender },
     { field: "dob", value: user.dob },
-    { field: "canDesc", value: user.canDesc },
-    {
-      field: "state",
-      value: user.state && user.state !== 0 ? user.state : null,
-    },
-    { field: "city", value: user.city && user.city !== 0 ? user.city : null },
-    { field: "fullAddress", value: user.fullAddress },
-    { field: "organization", value: user.organization },
-    { field: "sectorId", value: user.sectorId },
-    {
-      field: "industryId",
-      value: user.industryId && user.industryId !== 0 ? user.industryId : null,
-    },
+    { field: "gender", value: user.gender },
+    { field: "phone", value: user.phone },
   ];
 
   const completedFields = profileFields.filter(
@@ -3954,16 +3941,31 @@ export const userProfileLoaderHandler = async (
     (completedFields.length / profileFields.length) * 100
   );
 
-  // Calculate resume completeness
-  const resumeSections = {
-    coverLetter: !!(resume?.coverLetter && resume.coverLetter !== "NULL"),
-    skills: !!(resume?.skills && resume.skills !== "NULL"),
-    education: !!(resume?.education && resume.education !== "NULL"),
-    experience: !!(resume?.experience && resume.experience !== "NULL"),
-    portfolio: !!(resume?.portfolio && resume.portfolio !== "NULL"),
-    language: !!(resume?.language && resume.language !== "NULL"),
-    award: !!(resume?.award && resume.award !== "NULL"),
+  // Calculate resume completeness - Only specific sections
+  // Check if user has experience first
+  const hasExperience = !!(resume?.experience && resume.experience !== "NULL");
+
+  // Base mandatory sections (skills and education are always required)
+  const baseSections = {
+    skills: !!(
+      resume?.skills &&
+      resume.skills !== "NULL" &&
+      resume.skills !== ""
+    ),
+    education: !!(
+      resume?.education &&
+      resume.education !== "NULL" &&
+      resume.education !== ""
+    ),
   };
+
+  // If user has experience, include it in calculation
+  const resumeSections = hasExperience
+    ? {
+        ...baseSections,
+        experience: !!(resume?.experience && resume.experience !== "NULL"),
+      }
+    : baseSections;
 
   const completedResumeSections =
     Object.values(resumeSections).filter(Boolean).length;
@@ -3990,6 +3992,7 @@ export const userProfileLoaderHandler = async (
       uploaded: !!(resume?.cv && resume.cv !== "NULL"),
       completeness: resumeCompletenessPercentage,
       sections: resumeSections,
+      // hasExperience: hasExperience, // Added to track if experience exists
     },
     accountInfo: {
       accountAge,
@@ -4017,15 +4020,11 @@ export const userProfileLoaderHandler = async (
     },
   };
 
-  // Calculate overall completion percentage
+  // Calculate overall completion percentage based on new criteria
   const overallTasks = [
-    userStats.profileCompletion.percentage > 80,
-    userStats.resumeStatus.uploaded,
-    userStats.resumeStatus.completeness > 60,
-    userStats.completionTasks.profilePicture,
-    userStats.completionTasks.phoneNumber,
-    userStats.completionTasks.location,
-    userStats.accountInfo.emailVerified,
+    userStats.profileCompletion.percentage === 100, // All profile fields completed (name, email, dob, gender, phone)
+    userStats.resumeStatus.completeness === 100, // All required resume sections completed
+    userStats.accountInfo.emailVerified, // Email verification
   ];
 
   const overallCompletion = Math.round(
@@ -4036,7 +4035,7 @@ export const userProfileLoaderHandler = async (
     new ResponseHandler({
       message: "User profile fetched successfully",
       data: {
-        // ...userStats,
+        ...userStats,
         overallCompletion,
       },
     })
@@ -4239,20 +4238,27 @@ export const getCurrentUserHandler = async (
         if (resume.education) {
           educationData = JSON.parse(resume.education);
           if (Array.isArray(educationData)) {
-            for (let edu of educationData) {
-              if (edu.Education) {
-                const eduAttributes = await getAttributesByIds([edu.Education]);
-                edu.EducationInfo = eduAttributes[0] || null;
-              }
-              if (edu.Stream) {
-                const streamAttributes = await getAttributesByIds([edu.Stream]);
-                edu.StreamInfo = streamAttributes[0] || null;
-              }
-            }
+            // Format the portfolio data for response - keeping only existing fields
+            const formattedEducation = educationData.map((education: any) => ({
+              Education:
+                education.Education || education.education || "Not specified",
+              Stream: education.Stream || education.stream || "Not specified",
+              Start_Date:
+                education.Start_Date || education.start_Date || "Not specified",
+              End_Date:
+                education.End_Date || education.end_Date || "Not specified",
+              Institute:
+                education.Institute || education.institute || "Not specified",
+              EducationInfo: null,
+              StreamInfo: null,
+            }));
+            educationData = formattedEducation;
           }
         }
       } catch (e) {
-        educationData = resume.education;
+        if (resume.education) {
+          educationData = resume.education;
+        }
       }
 
       // Parse experience
