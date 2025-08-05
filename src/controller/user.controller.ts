@@ -4093,6 +4093,8 @@ export const getCurrentUserHandler = async (
         .filter((id) => !isNaN(id));
       if (numericIds.length === 0) return [];
 
+      console.log("numericIds  ====>", numericIds);
+
       const attributes = await db
         .select()
         .from(attribute)
@@ -4157,20 +4159,6 @@ export const getCurrentUserHandler = async (
       }
     }
 
-    // Get gender information from attribute table
-    let genderInfo = null;
-    if (user.gender) {
-      const genderData = await db
-        .select()
-        .from(attribute)
-        .where(eq(attribute.id, parseInt(user.gender)))
-        .limit(1);
-
-      if (genderData.length) {
-        genderInfo = genderData[0];
-      }
-    }
-
     // Structure the profile data
     const profileData: UserProfile = {
       id: user.id,
@@ -4185,7 +4173,6 @@ export const getCurrentUserHandler = async (
       organization: user.organization || undefined,
       canDesc: user.canDesc || undefined,
       gender: user.gender || undefined,
-      genderInfo, // Add gender attribute info
       dob: user.dob || undefined,
       age: user.age || undefined,
       socialMedia: {
