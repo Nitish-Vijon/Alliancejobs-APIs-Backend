@@ -34,6 +34,7 @@ import {
   getCurrentUserHandler,
   uploadProfilePicHandler,
   getDrowerStatusHandler,
+  toggleWishlistHandler,
 } from "../controller/user.controller";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -95,6 +96,10 @@ export const updateUserSkills = tryCatch(
 export const getUserSavedJobs = tryCatch(
   "Get User Saved Jobs",
   getUserSavedJobsHandler
+);
+export const toggleWishlist = tryCatch(
+  "Toggle Wishlist",
+  toggleWishlistHandler
 );
 
 export const getUserAppliedJobs = tryCatch(

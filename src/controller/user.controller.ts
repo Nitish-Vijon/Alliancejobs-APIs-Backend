@@ -886,6 +886,148 @@ export const getUserSavedJobsHandler = async (
   );
 };
 
+export const toggleWishlistHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { jobId } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(STATUS_CODES.BAD_REQUEST).json(
+        new ResponseHandler({
+          message: "User ID is required",
+          data: null,
+        }).toJSON()
+      );
+      return;
+    }
+
+    if (!jobId) {
+      res.status(STATUS_CODES.BAD_REQUEST).json(
+        new ResponseHandler({
+          message: "Job ID is required",
+          data: null,
+        }).toJSON()
+      );
+      return;
+    }
+
+    const userIdNumber =
+      typeof userId === "string" ? parseInt(userId) : (userId as number);
+    const jobIdNumber = parseInt(jobId);
+
+    if (isNaN(jobIdNumber)) {
+      res.status(STATUS_CODES.BAD_REQUEST).json(
+        new ResponseHandler({
+          message: "Invalid Job ID",
+          data: null,
+        }).toJSON()
+      );
+      return;
+    }
+
+    // Check if job exists and is active
+    const job = await db
+      .select({
+        id: tblJobPost.id,
+        jobTitle: tblJobPost.jobTitle,
+        status: tblJobPost.status,
+      })
+      .from(tblJobPost)
+      .where(eq(tblJobPost.id, jobIdNumber))
+      .limit(1);
+
+    if (job.length === 0) {
+      res.status(STATUS_CODES.NOT_FOUND).json(
+        new ResponseHandler({
+          message: "Job not found",
+          data: null,
+        }).toJSON()
+      );
+      return;
+    }
+
+    if (job[0].status !== 1) {
+      res.status(STATUS_CODES.BAD_REQUEST).json(
+        new ResponseHandler({
+          message: "Job is not active",
+          data: null,
+        }).toJSON()
+      );
+      return;
+    }
+
+    // Check if job is already in wishlist
+    const existingWishlistJob = await db
+      .select({ id: tblWishlist.id })
+      .from(tblWishlist)
+      .where(
+        and(
+          eq(tblWishlist.loginId, userIdNumber),
+          eq(tblWishlist.jobId, jobIdNumber)
+        )
+      )
+      .limit(1);
+
+    let isAdded = false;
+    let wishlistId = null;
+    let message = "";
+
+    if (existingWishlistJob.length > 0) {
+      // Job exists in wishlist - Remove it
+      await db
+        .delete(tblWishlist)
+        .where(
+          and(
+            eq(tblWishlist.loginId, userIdNumber),
+            eq(tblWishlist.jobId, jobIdNumber)
+          )
+        );
+
+      isAdded = false;
+      message = "Job removed from wishlist successfully";
+    } else {
+      // Job doesn't exist in wishlist - Add it
+      const nextId = await generateUniqueId(tblWishlist);
+      await db.insert(tblWishlist).values({
+        id: nextId,
+        loginId: userIdNumber,
+        jobId: jobIdNumber,
+      });
+
+      wishlistId = nextId;
+      isAdded = true;
+      message = "Job added to wishlist successfully";
+    }
+
+    // Send success response
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: message,
+        data: {
+          jobId: jobIdNumber,
+          wishlistId: wishlistId,
+          jobTitle: job[0].jobTitle,
+          isFavorite: isAdded,
+          isWishlisted: isAdded,
+          action: isAdded ? "added" : "removed",
+        },
+      }).toJSON()
+    );
+  } catch (error) {
+    console.error("Error in toggleWishlistHandler:", error);
+    res.status(STATUS_CODES.SERVER_ERROR).json(
+      new ResponseHandler({
+        message: "Internal server error",
+        data: null,
+      }).toJSON()
+    );
+  }
+};
+
 export const getUserAppliedJobsHandler = async (
   req: Request,
   res: Response,

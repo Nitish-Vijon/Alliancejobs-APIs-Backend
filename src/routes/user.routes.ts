@@ -35,6 +35,7 @@ import {
   getCurrentUser,
   uploaduserProfilePic,
   getDrowerStatus,
+  toggleWishlist,
 } from "../services/user.service";
 import { authenticateUser } from "../middleware/middleware";
 import {
@@ -65,6 +66,7 @@ routes.patch("/skills", authenticateUser, updateUserSkills);
 routes.post("/user-saved-jobs", authenticateUser, getUserSavedJobs);
 routes.get("/user-applied-jobs", authenticateUser, getUserAppliedJobs);
 routes.get("/user-favorite-jobs", authenticateUser, getUserFavoriteJobs);
+routes.post("/toggle-favorite", authenticateUser, toggleWishlist);
 routes.get(
   "/get_Data_For_Apply_Job/:jobId",
   authenticateUser,
