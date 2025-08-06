@@ -11,6 +11,7 @@ export const config = {
   otp_password: process.env.OTP_PASSWORD,
   otp_sender: process.env.OTP_SENDER,
   gemini_api_key: process.env.GEMINI_API_KEY,
+  dev_phone: process.env.DEV_PHONE,
 };
 
 export const mustload = () => {
