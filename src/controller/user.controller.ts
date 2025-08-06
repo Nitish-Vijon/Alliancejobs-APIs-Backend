@@ -40,6 +40,10 @@ import { promisify } from "util";
 import { validateFileType } from "../middleware/multer.middleware";
 import { getImageUrl } from "../util/getimageurl";
 import { generateUniqueId } from "../util/generateTableId";
+import {
+  normalizeExperience,
+  transformExperience,
+} from "../dto/transformExperience";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -3176,9 +3180,12 @@ export const addUserExperienceHandler = async (
     }
 
     // Normalize input to an array
-    const newExperienceEntries: any[] = Array.isArray(experienceData)
+    const newExperienceEntriesRaw: any[] = Array.isArray(experienceData)
       ? experienceData
       : [experienceData];
+
+    const newExperienceEntries =
+      newExperienceEntriesRaw.map(transformExperience);
 
     // Add new entries to the existing list
     currentExperience.push(...newExperienceEntries);
@@ -3270,13 +3277,16 @@ export const deleteUserExperienceHandler = async (
 
     // Method 1: Find by exact match of key fields
     currentExperience = currentExperience.filter((exp: any) => {
-      const matches =
-        exp.Company === experienceData.Company &&
-        exp.Designation === experienceData.Designation &&
-        exp.Start_Date === experienceData.Start_Date &&
-        exp.End_Date === experienceData.End_Date;
+      const dbExp = normalizeExperience(exp);
+      const reqExp = normalizeExperience(experienceData);
 
-      return !matches; // Keep entries that don't match
+      const matches =
+        dbExp.company === reqExp.company &&
+        dbExp.designation === reqExp.designation &&
+        dbExp.startDate === reqExp.startDate &&
+        dbExp.endDate === reqExp.endDate;
+
+      return !matches; // keep only non-matching entries
     });
 
     // If no exact match found, try partial matching with Company and Designation
