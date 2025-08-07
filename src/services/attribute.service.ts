@@ -13,6 +13,7 @@ import {
   addCustomAttributesHandler,
   getJobRoleTypesOptionsHandler,
   writeWithAiHandler,
+  getDepartmentsHandler,
 } from "../controller/attribute.controller.js";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -84,4 +85,9 @@ export const addCustomAttributes = tryCatch(
 export const writeWithAi = tryCatch(
   "Write With AI Handler",
   writeWithAiHandler
+);
+
+export const getDepartments = tryCatch(
+  "Get Departments Handler",
+  getDepartmentsHandler
 );

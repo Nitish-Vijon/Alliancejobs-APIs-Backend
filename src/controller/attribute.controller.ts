@@ -795,3 +795,38 @@ export const writeWithAiHandler = async (
     });
   }
 };
+
+export const getDepartmentsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const departments = await db.select().from(tblCatSector);
+
+    if (departments.length < 0) {
+      next(
+        new ErrorHandler({
+          message: "Failed to retrieve departments",
+          status: STATUS_CODES.BAD_REQUEST,
+        })
+      );
+    }
+
+    const formateDepartments = departments.map((department) => {
+      return {
+        id: department.id,
+        name: department.name,
+      };
+    });
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Departments retrieved successfully.",
+        data: formateDepartments,
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
