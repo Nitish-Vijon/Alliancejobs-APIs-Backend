@@ -53,3 +53,41 @@ export function normalizeExperience(exp) {
         : exp.End_Date || exp.endDate || "",
   };
 }
+
+export function transformEducation(data) {
+  return {
+    education: data.Education || data.education || "",
+    stream: data.Stream || data.stream || "",
+    startDate: data.Start_Date || data.startDate || "",
+    endDate: data.End_Date || data.endDate || "",
+    institute: data.Institute || data.institute || "",
+  };
+}
+
+export function normalizeEducation(exp) {
+  return {
+    education: exp.Company || exp.company || "",
+    stream: exp.Designation || exp.designation || "",
+    startDate: exp.Start_Date || exp.startDate || "",
+    endDate: exp.End_Date || exp.endDate || "",
+    institute: exp.Institute || exp.institute || "",
+  };
+}
+
+export function transformPortfolio(data) {
+  return {
+    title: data.Title || data.title || "",
+    url: data.Url || data.url || "",
+    image: data.Image || data.image || "",
+    description: data.Description || data.description || "",
+  };
+}
+
+export function transformAwards(data) {
+  return {
+    award: data.Award || data.award || "",
+    awardImage: data.Award_image || data.awardImage || "",
+    date: data.Date || data.date || "",
+    awardDescription: data.Award_Description || data.awardDescription || "",
+  };
+}

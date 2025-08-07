@@ -41,8 +41,12 @@ import { validateFileType } from "../middleware/multer.middleware";
 import { getImageUrl } from "../util/getimageurl";
 import { generateUniqueId } from "../util/generateTableId";
 import {
+  normalizeEducation,
   normalizeExperience,
+  transformAwards,
+  transformEducation,
   transformExperience,
+  transformPortfolio,
 } from "../dto/transformExperience";
 import { config } from "../lib/config";
 
@@ -2691,28 +2695,14 @@ export const getUserEducationHandler = async (
       isCompleted: edu.isCompleted !== undefined ? edu.isCompleted : true,
       originalData: {
         // Convert IDs to names in originalData
-        Education: getAttributeName(edu.Education),
-        Stream: getAttributeName(edu.Stream),
-        Start_Date: edu.Start_Date,
-        End_Date: edu.End_Date,
-        Institute: getAttributeName(edu.Institute),
-        Institute_Name: getAttributeName(edu.Institute_Name),
-        // Keep any other fields as they are
-        ...Object.keys(edu).reduce((acc, key) => {
-          if (
-            ![
-              "Education",
-              "Stream",
-              "Start_Date",
-              "End_Date",
-              "Institute",
-              "Institute_Name",
-            ].includes(key)
-          ) {
-            acc[key] = getAttributeName(edu[key]);
-          }
-          return acc;
-        }, {} as any),
+        Education: getAttributeName(edu.Education || edu.education),
+        Stream: getAttributeName(edu.Stream || edu.stream),
+        Start_Date: edu.Start_Date || edu.startDate,
+        End_Date: edu.End_Date || edu.endDate,
+        Institute: getAttributeName(edu.Institute || edu.institute),
+        Institute_Name: getAttributeName(
+          edu.Institute_Name || edu.instituteName
+        ),
       },
     }));
 
@@ -2791,11 +2781,13 @@ export const deleteUserEducationHandler = async (
 
     // Method 1: Find by exact match of key fields (updated field names)
     currentEducation = currentEducation.filter((edu: any) => {
+      const exactMatchDto = normalizeEducation(edu);
+      const educationDataDto = normalizeEducation(educationData);
       const matches =
-        edu.Education === educationData.Education &&
-        edu.Institute === educationData.Institute &&
-        edu.Start_Date === educationData.Start_Date &&
-        edu.End_Date === educationData.End_Date;
+        exactMatchDto.Education === educationDataDto.Education &&
+        exactMatchDto.Institute === educationDataDto.Institute &&
+        exactMatchDto.startDate === educationDataDto.startDate &&
+        exactMatchDto.endDate === educationDataDto.endDate;
 
       return !matches; // Keep entries that don't match
     });
@@ -2910,8 +2902,9 @@ export const addUserEducationHandler = async (
       ? educationData
       : [educationData];
 
+    const educationDataDto = newEducationEntries.map(transformEducation);
     // Add new entries to existing list
-    currentEducation.push(...newEducationEntries);
+    currentEducation.push(...educationDataDto);
 
     // Update in database
     await upsertResumeData(parsedUserId, {
@@ -3401,7 +3394,6 @@ export const getUserPortfolioHandler = async (
   try {
     const id = req.user?.id;
     const userId = typeof id === "string" ? parseInt(id) : (id as number);
-
     if (!userId) {
       throw new ErrorHandler({
         message: "User ID is required.",
@@ -3507,7 +3499,9 @@ export const addUserPortfolioHandler = async (
       ...portfolioData,
     };
 
-    currentPortfolio.push(newPortfolio);
+    const portfolioDto = transformPortfolio(newPortfolio);
+
+    currentPortfolio.push(portfolioDto);
 
     // Update in database
     await upsertResumeData(parsedUserId, {
@@ -3587,11 +3581,13 @@ export const deleteUserPortfolioHandler = async (
 
     // Method 1: Find by exact match of key fields
     currentPortfolio = currentPortfolio.filter((portfolio: any) => {
+      const exactDto = transformPortfolio(portfolio);
+      const reqDto = transformPortfolio(portfolioData);
       const matches =
-        portfolio.Title === portfolioData.Title &&
-        portfolio.Url === portfolioData.Url &&
-        portfolio.Image === portfolioData.Image &&
-        portfolio.Description === portfolioData.Description;
+        exactDto.title === reqDto.title &&
+        exactDto.url === reqDto.url &&
+        exactDto.image === reqDto.image &&
+        exactDto.description === reqDto.description;
 
       return !matches; // Keep entries that don't match
     });
@@ -3783,19 +3779,11 @@ export const getUserAwardsHandler = async (
     const formattedAwards = awardsData.map((award: any, index: number) => ({
       id: index, // Using index as ID for frontend reference
       originalData: {
-        Award: award.Award || "Not specified",
-        Award_image: award.Award_image || "Not specified",
-        Date: award.Date || "Not specified",
-        Award_Description: award.Award_Description || "Not specified",
-        // Keep any other fields as they are
-        ...Object.keys(award).reduce((acc, key) => {
-          if (
-            !["Award", "Award_image", "Date", "Award_Description"].includes(key)
-          ) {
-            acc[key] = award[key];
-          }
-          return acc;
-        }, {} as any),
+        Award: award.Award || award.award || "Not specified",
+        Award_image: award.Award_image || award.awardImage || "Not specified",
+        Date: award.Date || award.date || "Not specified",
+        Award_Description:
+          award.Award_Description || award.awardDescription || "Not specified",
       },
     }));
 
@@ -3864,7 +3852,10 @@ export const addUserAwardHandler = async (
       ...awardData,
     };
 
-    currentAwards.push(newAward);
+    // Generate a unique ID for the new entry
+    const newAwardDto = transformAwards(newAward);
+
+    currentAwards.push(newAwardDto);
 
     // Update in database
     await upsertResumeData(parsedUserId, {
@@ -3944,11 +3935,14 @@ export const deleteUserAwardHandler = async (
 
     // Method 1: Find by exact match of key fields
     currentAwards = currentAwards.filter((award: any) => {
+      const exactDto = transformAwards(award);
+      const reqDto = transformAwards(awardData);
+
       const matches =
-        award.Award === awardData.Award &&
-        award.Date === awardData.Date &&
-        award.Award_image === awardData.Award_image &&
-        award.Award_Description === awardData.Award_Description;
+        exactDto.award === reqDto.award &&
+        exactDto.date === reqDto.date &&
+        exactDto.awardImage === reqDto.awardImage &&
+        exactDto.awardDescription === reqDto.awardDescription;
 
       return !matches; // Keep entries that don't match
     });
