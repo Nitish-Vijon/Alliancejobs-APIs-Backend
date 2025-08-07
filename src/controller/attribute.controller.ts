@@ -802,7 +802,9 @@ export const getDepartmentsHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const departments = await db.select().from(tblCatSector);
+    const departments = await db
+      .select({ name: tblCatSector.name })
+      .from(tblCatSector);
 
     if (departments.length < 0) {
       next(
@@ -813,17 +815,10 @@ export const getDepartmentsHandler = async (
       );
     }
 
-    const formateDepartments = departments.map((department) => {
-      return {
-        id: department.id,
-        name: department.name,
-      };
-    });
-
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message: "Departments retrieved successfully.",
-        data: formateDepartments,
+        data: departments,
       }).toJSON()
     );
   } catch (error) {
