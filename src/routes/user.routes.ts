@@ -73,7 +73,12 @@ routes.get(
   get_Data_For_Apply_Job
 );
 
-routes.post("/apply-job/:jobId", authenticateUser, Apply_Job);
+routes.post(
+  "/apply-job/:jobId",
+  authenticateUser,
+  upload.single("resume"),
+  Apply_Job
+);
 routes.post(
   "/use-upload-resume",
   authenticateUser,

@@ -2056,6 +2056,7 @@ export const Apply_JobHandler = async (
   try {
     const jobId = req.params.jobId;
     const userId = Number(req.user?.id);
+    const file = req.file;
 
     // Validate required parameters
     if (!jobId || !userId) {
@@ -2072,6 +2073,31 @@ export const Apply_JobHandler = async (
       res.status(400).json({
         success: false,
         message: "Invalid job ID format",
+      });
+      return;
+    }
+
+    if (file && !validateFileType(file)) {
+      // Delete the uploaded file if invalid
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `Invalid file type. Allowed types: ${ALLOWED_EXTENSIONS.join(
+          ", "
+        )}`,
+      });
+      return;
+    }
+
+    // Validate file size
+    if (file && file.size > MAX_FILE_SIZE) {
+      // Delete the uploaded file if too large
+      await unlinkAsync(file.path);
+      res.status(400).json({
+        success: false,
+        message: `File too large. Maximum size: ${
+          MAX_FILE_SIZE / (1024 * 1024)
+        }MB`,
       });
       return;
     }
@@ -2184,6 +2210,43 @@ export const Apply_JobHandler = async (
 
     // Insert the application
     const result = await db.insert(tblJobApply).values(applicationData);
+
+    // Check if user already has a resume record
+    const existingResume = await db
+      .select()
+      .from(tblResume)
+      .where(eq(tblResume.candId, userId.toString()))
+      .limit(1);
+
+    // Generate file path relative to your uploads directory
+    const relativePath = file.path.replace(/\\/g, "/"); // Convert backslashes to forward slashes
+    const fileName = file.filename;
+    const originalName = file.originalname;
+
+    if (existingResume && existingResume.length > 0) {
+      // Update existing resume record
+      const oldResume = existingResume[0];
+
+      // Delete old resume file if it exists
+      if (oldResume.cv && oldResume.cv !== "NULL") {
+        try {
+          const oldFilePath = path.join(process.cwd(), "uploads", oldResume.cv);
+          if (fs.existsSync(oldFilePath)) {
+            await unlinkAsync(oldFilePath);
+          }
+        } catch (error) {
+          console.warn("Could not delete old resume file:", error);
+        }
+      }
+
+      // Update the resume record
+      await db
+        .update(tblResume)
+        .set({
+          cv: fileName, // Store only filename, not full path
+        })
+        .where(eq(tblResume.candId, userId.toString()));
+    }
 
     if (!result) {
       res.status(500).json({
@@ -2328,7 +2391,6 @@ export const uploadResumeHandler = async (
         .update(tblResume)
         .set({
           cv: fileName, // Store only filename, not full path
-          // You can add other fields here if needed from req.body
         })
         .where(eq(tblResume.candId, userId.toString()));
 
