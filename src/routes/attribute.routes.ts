@@ -15,6 +15,7 @@ import {
   getJobRoleTypesOptions,
   writeWithAi,
   getDepartments,
+  getOrganization,
 } from "../services/attribute.service";
 
 const routes = Router();
@@ -31,6 +32,7 @@ routes.get("/skills", getSkillsOptions);
 routes.get("/location-type", getLocationTypeOptions);
 routes.get("/job-role-types", getJobRoleTypesOptions);
 routes.get("/departments", getDepartments);
+routes.get("/organization", getOrganization);
 
 // POST route for adding custom Single attribute
 routes.post("/add-custom/:parentId", addCustomAttribute);

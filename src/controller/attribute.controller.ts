@@ -1,7 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { db } from "../db";
-import { attribute, cities, tblAIResponse, tblCatSector } from "../db/schema";
-import { and, count, eq, like } from "drizzle-orm";
+import {
+  attribute,
+  cities,
+  tblAIResponse,
+  tblCatSector,
+  tblUsers,
+} from "../db/schema";
+import { and, count, eq, like, or } from "drizzle-orm";
 import { ErrorHandler } from "../util/errorHandler";
 import { STATUS_CODES, StatusCodes } from "../constants/statusCodes";
 import { ResponseHandler } from "../util/responseHandler";
@@ -819,6 +825,42 @@ export const getDepartmentsHandler = async (
       new ResponseHandler({
         message: "Departments retrieved successfully.",
         data: departments,
+      }).toJSON()
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOrganizationHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const organization = await db
+      .select({
+        organization: tblUsers.organization,
+      })
+      .from(tblUsers);
+
+    if (organization.length < 0) {
+      next(
+        new ErrorHandler({
+          message: "Failed to retrieve organization",
+          status: STATUS_CODES.BAD_REQUEST,
+        })
+      );
+    }
+
+    const formatOrganization = organization
+      .filter((org) => org.organization != null && org.organization !== "")
+      .map((org) => org.organization);
+
+    res.status(STATUS_CODES.OK).json(
+      new ResponseHandler({
+        message: "Organization retrieved successfully.",
+        data: formatOrganization,
       }).toJSON()
     );
   } catch (error) {

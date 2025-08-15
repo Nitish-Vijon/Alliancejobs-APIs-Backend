@@ -14,6 +14,7 @@ import {
   getJobRoleTypesOptionsHandler,
   writeWithAiHandler,
   getDepartmentsHandler,
+  getOrganizationHandler,
 } from "../controller/attribute.controller.js";
 import { tryCatch } from "../util/tryCatch_Block";
 
@@ -90,4 +91,9 @@ export const writeWithAi = tryCatch(
 export const getDepartments = tryCatch(
   "Get Departments Handler",
   getDepartmentsHandler
+);
+
+export const getOrganization = tryCatch(
+  "Get Organization Handler",
+  getOrganizationHandler
 );
