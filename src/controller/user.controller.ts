@@ -1366,7 +1366,7 @@ export const updateUserAddressHandler = async (
   try {
     const id = req.user?.id; // Assuming userId is passed as a URL parameter
     const userId = typeof id === "string" ? parseInt(id) : (id as number);
-    const { address } = req.body;
+    const { address, cover_letter } = req.body;
 
     if (!userId) {
       throw new ErrorHandler({
@@ -1449,6 +1449,13 @@ export const updateUserAddressHandler = async (
       .update(tblUsers)
       .set(userProfileData)
       .where(eq(tblUsers.id, parsedUserId));
+
+    if (cover_letter) {
+      await db
+        .update(tblResume)
+        .set({ coverLetter: cover_letter })
+        .where(eq(tblResume.candId, parsedUserId.toString()));
+    }
 
     if (updateResult.affectedRows === 0) {
       throw new ErrorHandler({
