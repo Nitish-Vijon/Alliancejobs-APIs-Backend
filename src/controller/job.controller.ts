@@ -522,6 +522,8 @@ export const getJobDetailsHandler = async (
       });
     }
 
+    console.log("Check 1");
+
     // Get job details with company info and location data
     const jobDetails = await db
       .select({
@@ -665,8 +667,8 @@ export const getJobDetailsHandler = async (
           jobName: job.jobName,
           companyName: job.companyName,
           salary: formatSalaryRange(job.minSalary || 0, job.maxSalary || 0),
-          jobType: jobType.name,
-          locationType: locationType.name,
+          jobType: jobType?.name || "",
+          locationType: locationType?.name || "",
           jobDetails: job.jobDetails,
           aboutCompany: job.aboutCompany,
           exp: formatExperience(job.expMin, job.expMax, job.expFresher),
@@ -680,9 +682,9 @@ export const getJobDetailsHandler = async (
           // Additional fields that might be useful
           applicationDeadline: job.applicationDeadline,
           fullAddress: job.fullAddress,
-          industry: industry.name || "",
-          careerLevel: careerLevel.name || "",
-          qualifications: qualifications.name || "",
+          industry: industry?.name || "", // ✅ Safe
+          careerLevel: careerLevel?.name || "", // ✅ Safe
+          qualifications: qualifications?.name || "",
           otherBenefits: job.otherBenefits,
           interviewMode: job.interviewMode,
           immediateJoin: job.immediateJoin == 1 ? true : false,
@@ -904,35 +906,37 @@ export const getJobsByFiltersHandler = async (
 
         return {
           jobId: job.id,
-          jobTitle: job.jobTitle,
+          jobTitle: job.jobTitle || "",
           jobDescription: job.jobDesc
             ? job.jobDesc.substring(0, 200) + "..."
             : "",
           company: {
-            name: job.companyName || job.companyOrganization,
+            name: job.companyName || job.companyOrganization || "",
             profilePic: job.companyProfilePic,
           },
           location:
             job.cityName && job.stateName
               ? `${job.cityName}, ${job.stateName}`
-              : job.cityName || job.stateName,
+              : job.cityName || job.stateName || "",
 
           experience:
             job.expFresher === 1
               ? "Fresher"
-              : `${job.expMin}-${job.expMax} Yrs`,
-          jobType: jobTypeLabel,
-          locationType: locationTypeLabel,
+              : `${job.expMin}-${job.expMax} Yrs` || "",
+          jobType: jobTypeLabel || "",
+          locationType: locationTypeLabel || "",
           salaryType: job.salaryType,
-          salary: formatSalaryRange(job.minSalary || 0, job.maxSalary || 0),
-          sector: job.jobSector,
-          industry: job.industry,
-          skills: job.requiredSkills,
-          applications: `${applicationCount}+ Application${
-            applicationCount !== 1 ? "s" : ""
-          }`,
-          postedTime: getTimeAgo(job.postDate || null, job.id),
-          applicationDeadline: job.applicationDeadline,
+          salary:
+            formatSalaryRange(job.minSalary || 0, job.maxSalary || 0) || "",
+          sector: job.jobSector || "",
+          industry: job.industry || "",
+          skills: job.requiredSkills || "",
+          applications:
+            `${applicationCount}+ Application${
+              applicationCount !== 1 ? "s" : ""
+            }` || "",
+          postedTime: getTimeAgo(job.postDate || null, job.id) || "",
+          applicationDeadline: job.applicationDeadline || "",
           views: job.view || 0,
         };
       })
