@@ -13,7 +13,11 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-export async function runGemini(prompt: string, type: string): Promise<string> {
+export async function runGemini(
+  prompt: string,
+  type: string,
+  role?: string
+): Promise<string> {
   try {
     const { GoogleGenerativeAI } = require("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -32,7 +36,8 @@ export async function runGemini(prompt: string, type: string): Promise<string> {
         contextualPrompt = `Write a professional education description for: ${prompt}. Include relevant achievements and skills gained.Don't give me Answer in Option just write the 1 to 3 lines of Paragraph.`;
         break;
       case "Experience":
-        contextualPrompt = `Write a professional work experience description for: ${prompt}. Focus on responsibilities, achievements, and skills used.`;
+        contextualPrompt = `Write a professional work experience description for the role "${role}" with focus on: ${prompt}. Highlight responsibilities, achievements, and skills used.`;
+        break;
         break;
       case "Portfolio":
         contextualPrompt = `Write an engaging portfolio project description for: ${prompt}. Highlight key features, technologies used, and impact.`;

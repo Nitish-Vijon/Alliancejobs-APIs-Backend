@@ -762,7 +762,7 @@ export const writeWithAiHandler = async (
     }
 
     // Generate new AI response
-    const generatedText = await runGemini(prompt, type);
+    const generatedText = await runGemini(prompt, type, role);
 
     if (!generatedText) {
       next(
