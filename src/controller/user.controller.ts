@@ -1346,6 +1346,9 @@ export const updateUserBasicInfoHandler = async (
       phone2: basicInfo.whatsappNo,
       dob: basicInfo.dob,
       gender: basicInfo.genderId,
+      linkedin: basicInfo.linkedin || "",
+      facebook: basicInfo.facebook || "",
+      twitter: basicInfo.twitter || "",
     };
 
     const [updateResult] = await db
