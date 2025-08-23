@@ -288,6 +288,53 @@ function calculateTypedSimilarity(
   return Math.min(similarity, 1.0);
 }
 
+function calculateExperienceSimilarity(reqBody: any, dbResponse: any): number {
+  let score = 0;
+  let total = 0;
+
+  // Company weight
+  if (reqBody.company && dbResponse.company) {
+    score += calculateSimilarity(reqBody.company, dbResponse.company) * 0.4;
+    total += 0.4;
+  }
+
+  // Role weight
+  if (reqBody.role && dbResponse.role) {
+    score += calculateSimilarity(reqBody.role, dbResponse.role) * 0.3;
+    total += 0.3;
+  }
+
+  // Experience years (numeric closeness)
+  if (reqBody.experienceYears && dbResponse.experienceYears) {
+    const yearDiff = Math.abs(
+      reqBody.experienceYears - dbResponse.experienceYears
+    );
+    const yearScore = yearDiff === 0 ? 1 : Math.max(0, 1 - yearDiff / 5); // degrade over 5 years
+    score += yearScore * 0.2;
+    total += 0.2;
+  }
+
+  // Responsibilities overlap
+  if (reqBody.responsibilities && dbResponse.responsibilities) {
+    const reqResps = reqBody.responsibilities.map((r: string) =>
+      r.toLowerCase()
+    );
+    const dbResps = dbResponse.responsibilities
+      .split(",")
+      .map((r: string) => r.toLowerCase());
+    let matches = 0;
+    reqResps.forEach((r: string) => {
+      if (dbResps.some((d: string) => calculateSimilarity(r, d) > 0.8))
+        matches++;
+    });
+    const respScore = matches / Math.max(reqResps.length, dbResps.length);
+    score += respScore * 0.1;
+    total += 0.1;
+  }
+
+  return total > 0 ? score / total : 0;
+}
+
 // Helper function to determine degree level
 function getDegreeLevel(normalizedEducation: string): string {
   if (
@@ -311,13 +358,8 @@ function getDegreeLevel(normalizedEducation: string): string {
   return "unknown";
 }
 
-export async function findSimilarResponse(
-  prompt: string,
-  type: string,
-  role?: string
-) {
+export async function findSimilarResponse(reqBody: any, type: string) {
   try {
-    // Get all responses of the same type
     const responses = await db
       .select()
       .from(tblAIResponse)
@@ -325,16 +367,22 @@ export async function findSimilarResponse(
 
     let bestMatch = null;
     let bestSimilarity = 0;
-    const SIMILARITY_THRESHOLD = 0.75; // Adjust this threshold as needed
+    const SIMILARITY_THRESHOLD = 0.75;
 
     for (const response of responses) {
-      const similarity = calculateTypedSimilarity(
-        prompt,
-        response.prompt,
-        type,
-        role,
-        response.role
-      );
+      let similarity = 0;
+
+      if (type === "Experience") {
+        similarity = calculateExperienceSimilarity(reqBody, response);
+      } else {
+        similarity = calculateTypedSimilarity(
+          reqBody.prompt,
+          response.prompt,
+          type,
+          reqBody.role,
+          response.role
+        );
+      }
 
       if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
         bestSimilarity = similarity;

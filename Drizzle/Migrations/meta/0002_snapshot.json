@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "fe459127-31e7-442d-a20d-d40fa2e98c99",
-  "prevId": "ca0b0187-5ee2-4120-8930-519c329c82ea",
+  "id": "fa64e699-5296-45fe-98aa-3e7ce76d03a8",
+  "prevId": "3441dea5-3b5a-4ce4-9101-c1193264dcdf",
   "tables": {
     "attribute": {
       "name": "attribute",
@@ -625,6 +625,41 @@
           "notNull": false,
           "autoincrement": false
         },
+        "company": {
+          "name": "company",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "experience_years": {
+          "name": "experience_years",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "responsibilities": {
+          "name": "responsibilities",
+          "type": "longtext",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "achievements": {
+          "name": "achievements",
+          "type": "longtext",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "prompt": {
           "name": "prompt",
           "type": "longtext",
@@ -665,14 +700,7 @@
           ]
         }
       },
-      "uniqueConstraints": {
-        "tbl_ai_response_role_unique": {
-          "name": "tbl_ai_response_role_unique",
-          "columns": [
-            "role"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "checkConstraint": {}
     },
     "tbl_admin": {

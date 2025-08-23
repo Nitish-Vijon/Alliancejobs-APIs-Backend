@@ -238,6 +238,22 @@ export const getOtpForUserHandler = async (
     });
   }
 
+  const [userExistwithOtherType] = await db
+    .select()
+    .from(tblUsers)
+    .where(eq(tblUsers.phone, phone));
+  if (userExistwithOtherType && userExistwithOtherType.type !== "1") {
+    throw new ErrorHandler({
+      message: `Phone number already registered as ${
+        userExistwithOtherType.type === "2"
+          ? "Recruiter"
+          : " User have Account with different role."
+      }`,
+      status: STATUS_CODES.BAD_REQUEST,
+      data: { phone },
+    });
+  }
+
   // Generate OTP
   let otp;
   if (phone === config.dev_phone) {

@@ -13,53 +13,66 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-export async function runGemini(
-  prompt: string,
-  type: string,
-  role?: string
-): Promise<string> {
+interface GeminiInput {
+  type: string;
+  prompt: string;
+  role?: string;
+  company?: string;
+  experienceYears?: number;
+  location?: string;
+  responsibilities?: string[];
+  achievements?: string[];
+}
+
+export async function runGemini(input: GeminiInput): Promise<string> {
   try {
     const { GoogleGenerativeAI } = require("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    // For text-only input, use the gemini-1.5-flash model
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Create context-aware prompts based on type
     let contextualPrompt = "";
 
-    switch (type) {
-      case "Address":
-        contextualPrompt = `Write a professional address description or cover note for: ${prompt}. Keep it concise and professional`;
-        break;
-      case "Education":
-        contextualPrompt = `Write a professional education description for: ${prompt}. Include relevant achievements and skills gained.Don't give me Answer in Option just write the 1 to 3 lines of Paragraph.`;
-        break;
-      case "Experience":
-        contextualPrompt = `Write a professional work experience description for the role "${role}" with focus on: ${prompt}. Highlight responsibilities, achievements, and skills used.`;
-        break;
-        break;
-      case "Portfolio":
-        contextualPrompt = `Write an engaging portfolio project description for: ${prompt}. Highlight key features, technologies used, and impact.`;
-        break;
-      case "Awards":
-        contextualPrompt = `Write a professional award or honor description for: ${prompt}. Include the significance and achievement details.`;
-        break;
-      case "Skills":
-        contextualPrompt = `Write a professional skills description or summary for: ${prompt}. Focus on proficiency levels and practical applications.`;
-        break;
-      default:
-        contextualPrompt = `Write a professional description for: ${prompt}`;
+    if (input.type === "Experience") {
+      if (input.type === "Experience") {
+        contextualPrompt = `
+Write a professional and concise description (100-150 words) for the role "${
+          input.role
+        }" at "${input.company}" in "${input.location}".
+Describe the key responsibilities and achievements in natural, flowing sentences. 
+Responsibilities to consider: ${
+          input.responsibilities?.join("; ") || "none provided"
+        }.
+Achievements to highlight: ${input.achievements?.join("; ") || "none provided"}.
+Do not use bullets or lists. Integrate them smoothly into the paragraph so it reads like a strong CV entry.
+Keep it simple, clear, and focus on impact and results.
+`;
+      }
+    } else {
+      // Other types use simple prompt
+      switch (input.type) {
+        case "Address":
+          contextualPrompt = `Write a professional address description for: ${input.prompt}. Keep it concise and professional.`;
+          break;
+        case "Education":
+          contextualPrompt = `Write a professional education description for: ${input.prompt}. Include relevant achievements and skills gained.`;
+          break;
+        case "Portfolio":
+          contextualPrompt = `Write an engaging portfolio project description for: ${input.prompt}. Highlight key features, technologies used, and impact.`;
+          break;
+        case "Awards":
+          contextualPrompt = `Write a professional award or honor description for: ${input.prompt}. Include significance and achievement details.`;
+          break;
+        case "Skills":
+          contextualPrompt = `Write a professional skills description or summary for: ${input.prompt}. Focus on proficiency levels and practical applications.`;
+          break;
+        default:
+          contextualPrompt = `Write a professional description for: ${input.prompt}`;
+      }
     }
 
     const result = await model.generateContent(contextualPrompt);
     const response = await result.response;
     const text = response.text();
-
-    console.log(
-      `Generated ${type} content for prompt: "${prompt.substring(0, 50)}..."`
-    );
-
     return text;
   } catch (error) {
     console.error("An error occurred in runGemini:", error);

@@ -332,6 +332,11 @@ export const users = mysqlTable("users", {
 export const tblAIResponse = mysqlTable("tbl_ai_response", {
   id: int().notNull().primaryKey(),
   role: varchar("role", { length: 255 }),
+  company: varchar("company", { length: 255 }),
+  experienceYears: int("experience_years"),
+  location: varchar("location", { length: 255 }),
+  responsibilities: longtext("responsibilities").notNull(),
+  achievements: longtext("achievements").notNull(),
   prompt: longtext("prompt").notNull(),
   answer: longtext("answer").notNull(),
   type: mysqlEnum("type", [

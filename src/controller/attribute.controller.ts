@@ -14,6 +14,7 @@ import { ResponseHandler } from "../util/responseHandler";
 import { generateUniqueId } from "../util/generateTableId";
 import { runGemini } from "../util/writte_with_ai";
 import { findSimilarResponse } from "../util/matching";
+import { types } from "util";
 
 export const getAttributeOptionsHandler = async (
   req: Request,
@@ -709,13 +710,22 @@ export const writeWithAiHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { type, role, prompt } = req.body;
+    const {
+      type,
+      role,
+      prompt,
+      company,
+      experienceYears,
+      location,
+      responsibilities,
+      achievements,
+    } = req.body;
 
-    // Validate input
-    if (!type || !prompt) {
+    // Validate required fields
+    if (type !== "Experience" && !prompt) {
       res.status(400).json({
         success: false,
-        message: "Type and prompt are required fields",
+        message: "prompt is required field.",
       });
       return;
     }
@@ -737,35 +747,31 @@ export const writeWithAiHandler = async (
       return;
     }
 
-    // Check if similar prompt exists in database
-    let existingResponse: any;
-    if (type === "Experience") {
-      existingResponse = await findSimilarResponse(prompt, type, role);
-    } else {
-      existingResponse = await findSimilarResponse(prompt, type);
-    }
-
-    let aiResponse: string;
-
+    // Check for existing similar response
+    const existingResponse = await findSimilarResponse(req.body, type);
     if (existingResponse) {
-      // Return cached response
-      aiResponse = existingResponse.answer;
-
       res.status(200).json({
         success: true,
         message: "Response retrieved from similar cache",
-        data: {
-          answer: aiResponse,
-        },
+        data: { answer: existingResponse.answer },
       });
       return;
     }
 
-    // Generate new AI response
-    const generatedText = await runGemini(prompt, type, role);
+    // Generate AI response
+    const generatedText = await runGemini({
+      type,
+      prompt,
+      role,
+      company,
+      experienceYears,
+      location,
+      responsibilities,
+      achievements,
+    });
 
     if (!generatedText) {
-      next(
+      return next(
         new ErrorHandler({
           message: "Failed to generate AI response",
           status: STATUS_CODES.BAD_REQUEST,
@@ -773,24 +779,27 @@ export const writeWithAiHandler = async (
       );
     }
 
+    // Insert new response into DB
     const nextID = await generateUniqueId(tblAIResponse);
+    const dbRole = type === "Experience" ? role : null;
 
-    const dbrole = type === "Experience" ? role : null;
-    // Store new response in database
-    const insertResult = await db.insert(tblAIResponse).values({
+    await db.insert(tblAIResponse).values({
       id: nextID,
-      role: dbrole, // Using type as role
-      prompt: prompt,
-      answer: generatedText,
+      role: dbRole,
       type: type as any,
+      company: company || null,
+      experienceYears: experienceYears || null,
+      location: location || null,
+      responsibilities: responsibilities?.join(", ") || null,
+      achievements: achievements?.join(", ") || null,
+      prompt: prompt || "",
+      answer: generatedText.trim(),
     });
 
     res.status(201).json({
       success: true,
       message: "AI response generated and saved successfully",
-      data: {
-        answer: generatedText,
-      },
+      data: { answer: generatedText.trim() },
     });
   } catch (error) {
     console.error("Error in writeWithAiHandler:", error);
