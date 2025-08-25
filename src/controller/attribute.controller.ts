@@ -81,10 +81,14 @@ export const getGenderOptionsHandler = async (
       console.warn("No gender options found in the attribute table");
     }
 
+    const genderOptionNames = genderOptions.filter((option) =>
+      ["Male", "Female"].includes(option.name)
+    );
+
     res.status(STATUS_CODES.OK).json(
       new ResponseHandler({
         message: "Gender options retrieved successfully.",
-        data: genderOptions,
+        data: genderOptionNames,
       }).toJSON()
     );
   } catch (error) {
