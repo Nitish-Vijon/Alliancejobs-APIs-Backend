@@ -151,7 +151,7 @@ export const getRecentJobsHandler = async (
           jobTitle: job.jobTitle,
           company: {
             name: job.companyName,
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
           },
           location: job.cityName,
           experience: `${job.expMin}-${job.expMax} Yrs`,
