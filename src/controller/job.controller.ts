@@ -427,7 +427,7 @@ export const getJobsBySearchHandler = async (
             : "",
           company: {
             name: job.companyName || job.companyOrganization,
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
           },
           location:
             job.cityName && job.stateName
@@ -912,7 +912,7 @@ export const getJobsByFiltersHandler = async (
             : "",
           company: {
             name: job.companyName || job.companyOrganization || "",
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
           },
           location:
             job.cityName && job.stateName

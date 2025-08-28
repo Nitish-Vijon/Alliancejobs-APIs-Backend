@@ -578,7 +578,7 @@ export const getUserRelatedProfileJobsHandler = async (
           jobTitle: job.jobTitle,
           company: {
             name: job.companyName,
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
           },
           location: job.cityName,
           experience: `${job.expMin}-${job.expMax} Yrs`,
@@ -870,7 +870,7 @@ export const getUserSavedJobsHandler = async (
         jobTitle: job.jobTitle,
         company: {
           name: job.companyName,
-          profilePic: job.companyProfilePic,
+          profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
         },
         location: job.cityName,
         experience: `${job.expMin}-${job.expMax} Yrs`,
@@ -1215,7 +1215,7 @@ export const getUserAppliedJobsHandler = async (
           jobTitle: job.jobTitle,
           company: {
             name: job.companyName,
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
           },
           location: job.cityName,
           experience: `${job.expMin}-${job.expMax} Yrs`,
@@ -1677,7 +1677,7 @@ export const getUserFavoriteJobsHandler = async (
           jobDescription: job.jobDesc,
           company: {
             name: job.companyName,
-            profilePic: job.companyProfilePic,
+            profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
             organization: job.companyOrganization,
           },
           location: job.cityName,
@@ -1939,7 +1939,7 @@ export const get_Data_For_Apply_JobHandler = async (
       company: {
         id: job.eId,
         name: job.companyName,
-        profilePic: job.companyProfilePic,
+        profilePic: `https://www.alliancejobs.in/employer_account/e_upload/${job.companyProfilePic}`,
         organization: job.companyOrganization,
       },
       location: {
@@ -2501,8 +2501,15 @@ export const getUserResumeHandler = async (
     }
 
     const resume = await db
-      .select()
+      .select({
+        cv: tblResume.cv,
+        profilePic: tblUsers.profilePic,
+      })
       .from(tblResume)
+      .innerJoin(
+        tblUsers,
+        eq(tblResume.candId, sql`CAST(${tblUsers.id} AS CHAR)`)
+      )
       .where(eq(tblResume.candId, userId.toString()))
       .limit(1);
 
@@ -2532,6 +2539,7 @@ export const getUserResumeHandler = async (
         ...resumeData,
         fileExists,
         imageUrl: getImageUrl(resumeData.cv) || "",
+        userProfilePic: getImageUrl(resumeData.profilePic) || "",
       },
     });
   } catch (error) {
