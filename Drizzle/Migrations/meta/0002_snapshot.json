@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "fa64e699-5296-45fe-98aa-3e7ce76d03a8",
-  "prevId": "3441dea5-3b5a-4ce4-9101-c1193264dcdf",
+  "id": "ccb2802e-cd06-4e35-855d-b941bc9960e8",
+  "prevId": "fa64e699-5296-45fe-98aa-3e7ce76d03a8",
   "tables": {
     "attribute": {
       "name": "attribute",
@@ -639,25 +639,32 @@
           "notNull": false,
           "autoincrement": false
         },
-        "location": {
-          "name": "location",
+        "department": {
+          "name": "department",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "responsibilities": {
-          "name": "responsibilities",
-          "type": "longtext",
+        "industry": {
+          "name": "industry",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
-        "achievements": {
-          "name": "achievements",
-          "type": "longtext",
+        "job_type": {
+          "name": "job_type",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "salary": {
+          "name": "salary",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "prompt": {

@@ -334,9 +334,10 @@ export const tblAIResponse = mysqlTable("tbl_ai_response", {
   role: varchar("role", { length: 255 }),
   company: varchar("company", { length: 255 }),
   experienceYears: int("experience_years"),
-  location: varchar("location", { length: 255 }),
-  responsibilities: longtext("responsibilities").notNull(),
-  achievements: longtext("achievements").notNull(),
+  department: varchar("department", { length: 255 }),
+  industry: varchar("industry", { length: 255 }),
+  jobType: varchar("job_type", { length: 255 }),
+  salary: int("salary"),
   prompt: longtext("prompt").notNull(),
   answer: longtext("answer").notNull(),
   type: mysqlEnum("type", [

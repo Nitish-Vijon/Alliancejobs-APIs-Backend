@@ -19,9 +19,10 @@ interface GeminiInput {
   role?: string;
   company?: string;
   experienceYears?: number;
-  location?: string;
-  responsibilities?: string[];
-  achievements?: string[];
+  department?: string;
+  industry?: string;
+  jobType?: string;
+  salary?: number;
 }
 
 export async function runGemini(input: GeminiInput): Promise<string> {
@@ -33,20 +34,25 @@ export async function runGemini(input: GeminiInput): Promise<string> {
     let contextualPrompt = "";
 
     if (input.type === "Experience") {
-      if (input.type === "Experience") {
-        contextualPrompt = `
+      contextualPrompt = `
 Write a professional and concise description (100-150 words) for the role "${
-          input.role
-        }" at "${input.company}" in "${input.location}".
-Describe the key responsibilities and achievements in natural, flowing sentences. 
-Responsibilities to consider: ${
-          input.responsibilities?.join("; ") || "none provided"
-        }.
-Achievements to highlight: ${input.achievements?.join("; ") || "none provided"}.
-Do not use bullets or lists. Integrate them smoothly into the paragraph so it reads like a strong CV entry.
-Keep it simple, clear, and focus on impact and results.
+        input.role
+      }" at "${input.company}"${
+        input.department ? ` in the ${input.department} department` : ""
+      }${input.industry ? ` (${input.industry} industry)` : ""}.
+${input.jobType ? `Position type: ${input.jobType}.` : ""}
+${
+  input.experienceYears
+    ? `Experience level: ${input.experienceYears} years.`
+    : ""
+}
+${input.salary ? `Salary range: ${input.salary}.` : ""}
+
+Create a compelling professional description that highlights key responsibilities, achievements, and impact in this role.
+Write in natural, flowing sentences without using bullets or lists. 
+Focus on measurable results, leadership, technical skills, and business impact.
+Keep it simple, clear, and professional for a CV/resume format.
 `;
-      }
     } else {
       // Other types use simple prompt
       switch (input.type) {

@@ -720,9 +720,10 @@ export const writeWithAiHandler = async (
       prompt,
       company,
       experienceYears,
-      location,
-      responsibilities,
-      achievements,
+      department,
+      industry,
+      jobType,
+      salary,
     } = req.body;
 
     // Validate required fields
@@ -769,9 +770,10 @@ export const writeWithAiHandler = async (
       role,
       company,
       experienceYears,
-      location,
-      responsibilities,
-      achievements,
+      department,
+      industry,
+      jobType,
+      salary,
     });
 
     if (!generatedText) {
@@ -793,9 +795,10 @@ export const writeWithAiHandler = async (
       type: type as any,
       company: company || null,
       experienceYears: experienceYears || null,
-      location: location || null,
-      responsibilities: responsibilities?.join(", ") || null,
-      achievements: achievements?.join(", ") || null,
+      department: department || null,
+      industry: industry || null,
+      jobType: jobType || null,
+      salary: salary || null,
       prompt: prompt || "",
       answer: generatedText.trim(),
     });

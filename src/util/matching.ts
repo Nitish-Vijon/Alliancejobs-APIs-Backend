@@ -294,14 +294,14 @@ function calculateExperienceSimilarity(reqBody: any, dbResponse: any): number {
 
   // Company weight
   if (reqBody.company && dbResponse.company) {
-    score += calculateSimilarity(reqBody.company, dbResponse.company) * 0.4;
-    total += 0.4;
+    score += calculateSimilarity(reqBody.company, dbResponse.company) * 0.3;
+    total += 0.3;
   }
 
   // Role weight
   if (reqBody.role && dbResponse.role) {
-    score += calculateSimilarity(reqBody.role, dbResponse.role) * 0.3;
-    total += 0.3;
+    score += calculateSimilarity(reqBody.role, dbResponse.role) * 0.25;
+    total += 0.25;
   }
 
   // Experience years (numeric closeness)
@@ -314,21 +314,16 @@ function calculateExperienceSimilarity(reqBody: any, dbResponse: any): number {
     total += 0.2;
   }
 
-  // Responsibilities overlap
-  if (reqBody.responsibilities && dbResponse.responsibilities) {
-    const reqResps = reqBody.responsibilities.map((r: string) =>
-      r.toLowerCase()
-    );
-    const dbResps = dbResponse.responsibilities
-      .split(",")
-      .map((r: string) => r.toLowerCase());
-    let matches = 0;
-    reqResps.forEach((r: string) => {
-      if (dbResps.some((d: string) => calculateSimilarity(r, d) > 0.8))
-        matches++;
-    });
-    const respScore = matches / Math.max(reqResps.length, dbResps.length);
-    score += respScore * 0.1;
+  // Department similarity
+  if (reqBody.department && dbResponse.department) {
+    score +=
+      calculateSimilarity(reqBody.department, dbResponse.department) * 0.15;
+    total += 0.15;
+  }
+
+  // Industry similarity
+  if (reqBody.industry && dbResponse.industry) {
+    score += calculateSimilarity(reqBody.industry, dbResponse.industry) * 0.1;
     total += 0.1;
   }
 
