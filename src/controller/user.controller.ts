@@ -2502,11 +2502,23 @@ export const getUserResumeHandler = async (
 
     const resume = await db
       .select({
+        id: tblResume.id,
+        candId: tblResume.candId,
         cv: tblResume.cv,
+        coverLetter: tblResume.coverLetter,
+        skills: tblResume.skills,
+        location: tblResume.location,
+        hobbies: tblResume.hobbies,
+        education: tblResume.education,
+        experience: tblResume.experience,
+        portfolio: tblResume.portfolio,
+        language: tblResume.language,
+        noticePeriod: tblResume.noticePeriod,
+        award: tblResume.award,
         profilePic: tblUsers.profilePic,
       })
       .from(tblResume)
-      .innerJoin(
+      .rightJoin(
         tblUsers,
         eq(tblResume.candId, sql`CAST(${tblUsers.id} AS CHAR)`)
       )
