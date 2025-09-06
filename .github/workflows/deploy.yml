@@ -44,12 +44,12 @@ jobs:
             docker stop alliancejobs-backend || true
             docker rm alliancejobs-backend || true
 
-            docker run -d -p 3000:3000 --name alliancejobs-backend \
-              -e PORT=3000 \
+            docker run -d -p 3001:3001 --name alliancejobs-backend \
+              -e PORT=3001 \
               -e DATABASE_URL="mysql://alliancejobs_alliancejobs:Alliance%401234%26@31.97.202.105:3306/alliancejobs_bharat" \
               -e COHERE_API_KEY="7EhOt6T4sKMUgyl2KBdKLDapj8PBC6L9A5ftULO5" \
               -e ACCESS_TOKEN_SECRET="PSDCmDQfm0OdyrSurIsgjSXreKL5fNaVq6ZPhlOT4xs" \
-              -e BACKEND_URL="http://localhost:3000" \
+              -e BACKEND_URL="http://localhost:3001" \
               -e OTP_USERNAME="allgrw" \
               -e OTP_PASSWORD="sms@2023" \
               -e OTP_SENDER="ALLGRW" \
