@@ -60,5 +60,4 @@ jobs:
             sleep 10
 
             docker ps | grep alliancejobs-backend
-            docker system prune -f
           EOF
