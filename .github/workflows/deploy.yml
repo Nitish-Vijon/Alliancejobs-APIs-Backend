@@ -33,12 +33,12 @@ jobs:
     steps:
       - name: Setup SSH Key
         run: |
-          echo "${{ secrets.LIVE_SERVER_SSH_KEY }}" > server.pem
+          echo "${{ secrets.LIVE_SERVER_SSH_KEY }}" | tr -d '\r' > server.pem
           chmod 600 server.pem
 
       - name: Deploy to Production via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no -i server.pem root@${{ secrets.LIVE_SERVER_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i server.pem root@31.97.202.105 << 'EOF'
             docker pull jasveer399/alliancejobs-backend:latest
 
             docker stop alliancejobs-backend || true
