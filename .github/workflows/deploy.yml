@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Setup SSH Key
         run: |
-          echo "${{ secrets.LIVE_SERVER_SSH_KEY }}" > server.pem
+          printf "%s" "${{ secrets.LIVE_SERVER_SSH_KEY }}" > server.pem
           chmod 600 server.pem
 
       - name: Deploy to Production via SSH
