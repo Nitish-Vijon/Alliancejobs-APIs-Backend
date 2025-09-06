@@ -1,0 +1,64 @@
+name: Deploy AllianceJobs Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: docker login -u jasveer399 -p ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Set Image Tag
+        id: set_tag
+        run: |
+          echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+
+      - name: Build Docker Image
+        run: docker build -t jasveer399/alliancejobs-backend:${{ env.IMAGE_TAG }} .
+
+      - name: Push Image to Docker Hub
+        run: docker push jasveer399/alliancejobs-backend:${{ env.IMAGE_TAG }}
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Setup SSH Key
+        run: |
+          echo "${{ secrets.LIVE_SERVER_SSH_KEY }}" > server.pem
+          chmod 600 server.pem
+
+      - name: Deploy to Production via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no -i server.pem root@${{ secrets.LIVE_SERVER_IP }} << 'EOF'
+            docker pull jasveer399/alliancejobs-backend:latest
+
+            docker stop alliancejobs-backend || true
+            docker rm alliancejobs-backend || true
+
+            docker run -d -p 3000:3000 --name alliancejobs-backend \
+              -e PORT=3000 \
+              -e DATABASE_URL="mysql://alliancejobs_alliancejobs:Alliance%401234%26@31.97.202.105:3306/alliancejobs_bharat" \
+              -e COHERE_API_KEY="7EhOt6T4sKMUgyl2KBdKLDapj8PBC6L9A5ftULO5" \
+              -e ACCESS_TOKEN_SECRET="PSDCmDQfm0OdyrSurIsgjSXreKL5fNaVq6ZPhlOT4xs" \
+              -e BACKEND_URL="http://localhost:3000" \
+              -e OTP_USERNAME="allgrw" \
+              -e OTP_PASSWORD="sms@2023" \
+              -e OTP_SENDER="ALLGRW" \
+              -e GEMINI_API_KEY="AIzaSyBNQR3eEBdyBS9U4RIbCT3IBIz3jNBU1bc" \
+              -e DEV_PHONE="6205425116" \
+              jasveer399/alliancejobs-backend:latest
+
+            sleep 10
+
+            docker ps | grep alliancejobs-backend
+            docker system prune -f
+          EOF
