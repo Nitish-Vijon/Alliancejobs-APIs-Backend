@@ -4,7 +4,7 @@ export const phoneSchema = z
   .string({ required_error: "Phone number is required" })
   .trim()
   .min(1, "Phone number cannot be empty")
-  .transform((val) => val.replace(/[\s\-\(\)]/g, "")) // Remove spaces, dashes, parentheses
+  .transform((val) => val.replace(/[\s\-\(\)]/g, ""))
   .refine((val) => /^\d{10}$/.test(val), {
     message: "Phone number must be exactly 10 digits",
   })
