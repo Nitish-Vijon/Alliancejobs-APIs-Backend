@@ -39,12 +39,16 @@ jobs:
       - name: Deploy to Production via SSH
         run: |
           ssh -o StrictHostKeyChecking=no -i server.pem root@${{ secrets.LIVE_SERVER_IP }} << 'EOF'
+            # Pull latest image
             docker pull jasveer399/alliancejobs-backend:latest
 
-            docker stop alliancejobs-backend || true
-            docker rm alliancejobs-backend || true
+            # Stop and remove existing container
+            docker stop alliancejobs-backend 2>/dev/null || echo "Container not running"
+            docker rm alliancejobs-backend 2>/dev/null || echo "Container not found"
 
+            # Start new container
             docker run -d -p 3001:3001 --name alliancejobs-backend \
+              --restart unless-stopped \
               -e PORT=3001 \
               -e DATABASE_URL="mysql://alliancejobs_alliancejobs:Alliance%401234%26@31.97.202.105:3306/alliancejobs_bharat" \
               -e COHERE_API_KEY="7EhOt6T4sKMUgyl2KBdKLDapj8PBC6L9A5ftULO5" \
@@ -57,7 +61,33 @@ jobs:
               -e DEV_PHONE="6205425116" \
               jasveer399/alliancejobs-backend:latest
 
-            sleep 10
+            # Wait for container to start
+            echo "Waiting for container to start..."
+            sleep 15
 
-            docker ps | grep alliancejobs-backend
+            # Check container status
+            if docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep alliancejobs-backend; then
+              echo "✅ Container is running successfully"
+              
+              # Optional: Check if the application is responding
+              echo "Checking application health..."
+              if curl -f http://localhost:3001/health 2>/dev/null || curl -f http://localhost:3001 2>/dev/null; then
+                echo "✅ Application is responding"
+              else
+                echo "⚠️ Application might still be starting up"
+              fi
+            else
+              echo "❌ Container failed to start"
+              echo "Container logs:"
+              docker logs alliancejobs-backend 2>/dev/null || echo "No logs available"
+              exit 1
+            fi
+
+            # Show running containers
+            echo "Current running containers:"
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
           EOF
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -f server.pem
